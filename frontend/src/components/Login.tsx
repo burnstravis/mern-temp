@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import { storeToken } from '../tokenStorage';
 import { jwtDecode } from 'jwt-decode';
+// @ts-ignore
+import md5 from '../../md5';
 function Login()
 {
     const [message,setMessage] = useState('');
@@ -10,7 +12,8 @@ function Login()
     async function doLogin(event:any) : Promise<void>
     {
         event.preventDefault();
-        var obj = {login:loginName,password:loginPassword};
+        const hashedPassword = md5(loginPassword);
+        var obj = {login:loginName,password:hashedPassword};
         var js = JSON.stringify(obj);
         try
         {
