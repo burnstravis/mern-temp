@@ -40,6 +40,7 @@ exports.setApp = function (app, client) {
     app.post('/api/login', async (req, res, next) => {
         const { login, password, jwtToken } = req.body;
 
+        console.log(login, password);
         if (jwtToken) {
             try {
                 if (tokenHandler.isExpired(jwtToken)) {
@@ -54,10 +55,13 @@ exports.setApp = function (app, client) {
         let ret;
 
         try {
-            const results = await db.collection('Users').find({ Login: login, Password: password }).toArray();
+            const results = await db.collection('Users').find({
+                Username: login,
+                Password: password
+            }).toArray();
 
             if (results.length > 0) {
-                const id = results[0].UserId;
+                const id = results[0]._id;
                 const fn = results[0].FirstName;
                 const ln = results[0].LastName;
 
@@ -79,6 +83,39 @@ exports.setApp = function (app, client) {
 
         res.status(200).json(ret);
     });
+
+    app.post('/api/register', async (req, res, next) =>
+    {
+        const { firstName, lastName, email, username, password } = req.body;
+
+        const newUser = {
+            FirstName: firstName,
+            LastName: lastName,
+            Email: email,
+            Username: username,
+            Password: password
+        };
+
+        var error = '';
+
+        try {
+            const db = client.db('COP4331Cards');
+
+            const existingUser = await db.collection('Users').findOne({ Login: username });
+            if(existingUser){
+                return res.status(200).json({ error: 'Username already taken' });
+            }
+
+            await db.collection('Users').insertOne(newUser);
+        } catch (e) {
+            error = e.toString();
+            return res.status(200).json({ error: error });
+        }
+
+        res.status(200).json({ error: error });
+    });
+
+
 
     app.post('/api/searchcards', async (req, res, next) =>
     {
