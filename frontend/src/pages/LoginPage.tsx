@@ -1,12 +1,15 @@
-import PageTitle from '../components/PageTitle.tsx';
-import Login from '../components/Login.tsx';
-const LoginPage = () =>
-{
-    return(
-        <div>
-            <PageTitle />
-            <Login />
-        </div>
-    );
+import AppTitle from '../components/AppTitle';
+import Login from '../components/Login';
+
+const LoginPage = () => {
+  return (
+    <div id="loginWrapper" className="wrapper">
+      <div id="loginContainer" className="container">
+        <AppTitle />
+        <Login />
+      </div>
+    </div>
+  );
 };
+
 export default LoginPage;

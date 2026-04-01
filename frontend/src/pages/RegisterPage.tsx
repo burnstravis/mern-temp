@@ -1,12 +1,16 @@
-import PageTitle from '../components/PageTitle.tsx';
-import Register from '../components/Register.tsx';
-const RegisterPage = () =>
-{
-    return(
-        <div>
-            <PageTitle />
-            <Register />
-        </div>
-    );
+import AppTitle from '../components/AppTitle';
+import Register from '../components/Register';
+
+
+const RegisterPage = () => {
+  return (
+    <div id="registerWrapper" className="wrapper">
+      <div id="registerContainer" className="container">
+        <AppTitle />
+        <Register />
+      </div>
+    </div>
+  );
 };
+
 export default RegisterPage;
