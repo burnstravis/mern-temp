@@ -1,0 +1,25 @@
+name: Deploy MERN Stack
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/mern-temp
+            git pull origin main
+            npm install
+            cd frontend
+            npm install
+            npm run build
+            cd ..
+            pm2 restart mern-app
