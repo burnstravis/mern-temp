@@ -2,11 +2,17 @@ require('express');
 require('mongodb');
 const tokenHandler = require('./createJWT.js'); //
 
+
+
 exports.setApp = function (app, client) {
 
     app.post('/api/addcard', async (req, res, next) =>
     {
         const { userId, card, jwtToken } = req.body;
+
+        if (!jwtToken) {
+            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
+        }
 
         try {
             if (tokenHandler.isExpired(jwtToken)) {
@@ -40,7 +46,10 @@ exports.setApp = function (app, client) {
     app.post('/api/login', async (req, res, next) => {
         const { login, password, jwtToken } = req.body;
 
-        console.log(login, password);
+        if (!jwtToken) {
+            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
+        }
+
         if (jwtToken) {
             try {
                 if (tokenHandler.isExpired(jwtToken)) {

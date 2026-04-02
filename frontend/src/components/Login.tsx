@@ -23,6 +23,8 @@ function Login()
                 headers: { 'Content-Type': 'application/json' }
             });
 
+            console.log('response', response);
+
             const res = await response.json();
 
             const token = res.accessToken;
@@ -58,6 +60,7 @@ function Login()
             alert(error.toString());
             return;
         }
+
     };
     function handleSetLoginName( e: any ) : void
     {

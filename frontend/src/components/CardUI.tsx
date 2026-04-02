@@ -3,21 +3,24 @@ import { buildPath } from './path';
 import { retrieveToken, storeToken } from '../tokenStorage';
 
 function CardUI() {
+    const _ud = localStorage.getItem('user_data');
+
+    if (!_ud) {
+        window.location.href = "/";
+    }
+
     const [message, setMessage] = useState('');
     const [searchResults, setResults] = useState('');
     const [cardList, setCardList] = useState('');
     const [search, setSearchValue] = React.useState('');
     const [card, setCardNameValue] = React.useState('');
 
-    // Pull user data from local storage
-    const _ud = localStorage.getItem('user_data');
     const ud = _ud ? JSON.parse(_ud) : { id: -1 };
-    const userId = ud.id;
+    const userId = ud._id;
 
     async function addCard(e: any): Promise<void> {
         e.preventDefault();
 
-        // FIX: Retrieve the token and store it in a variable
         const token = retrieveToken();
         const obj = { userId: userId, card: card, jwtToken: token };
         const js = JSON.stringify(obj);
@@ -64,7 +67,6 @@ function CardUI() {
                 return;
             }
 
-            // FIX: Match backend key 'accessToken'
             if (res.accessToken) storeToken(res.accessToken);
 
             const _results = res.results || [];
