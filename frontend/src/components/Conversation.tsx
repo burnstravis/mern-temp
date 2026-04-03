@@ -7,150 +7,151 @@ const fakeMessages = [
         _id: "m1",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yo random question",
+        text: "Yo what are you doing right now",
         createdAt: "2026-04-02T21:50:00Z"
     },
     {
         _id: "m2",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "This already sounds dangerous",
+        text: "Nothing much, just eating breakfast lol",
         createdAt: "2026-04-02T21:52:00Z"
     },
     {
         _id: "m3",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Would you rather fight 1 horse-sized duck or 100 duck-sized horses",
+        text: "Breakfast at 5pm is crazy",
         createdAt: "2026-04-02T21:53:30Z"
     },
     {
         _id: "m4",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "100 duck-sized horses easy",
+        text: "Don’t judge me, my sleep schedule is cooked",
         createdAt: "2026-04-02T21:54:10Z"
     },
     {
         _id: "m5",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Nah you're underestimating the swarm",
+        text: "Same tbh. I stayed up till like 4 finishing stuff",
         createdAt: "2026-04-02T21:55:00Z"
     },
     {
         _id: "m6",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Bro it's tiny horses, just start kicking",
+        text: "Working on that project still?",
         createdAt: "2026-04-02T21:55:45Z"
     },
     {
         _id: "m7",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "You think you'd win against 100 of anything??",
+        text: "Yeah the MLB one, trying to optimize the backend. It’s kinda slow rn",
         createdAt: "2026-04-02T21:56:30Z"
     },
     {
         _id: "m8",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Confidence is key",
+        text: "Didn’t you already add threading to that?",
         createdAt: "2026-04-02T21:57:05Z"
     },
     {
         _id: "m9",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "That horse-sized duck is terrifying though",
+        text: "Yeah but it’s kinda overkill on my server, I think I need to batch stuff better",
         createdAt: "2026-04-02T21:58:10Z"
     },
     {
         _id: "m10",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Yeah one bite and it's over",
+        text: "Makes sense. Are you using MySQL for it?",
         createdAt: "2026-04-02T21:59:00Z"
     },
     {
         _id: "m11",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Exactly. At least with the small ones you have a chance",
+        text: "Yeah MariaDB actually. Inserts are the slow part",
         createdAt: "2026-04-02T22:00:15Z"
     },
     {
         _id: "m12",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Also imagine explaining you lost to a giant duck",
+        text: "You should do bulk inserts instead of one per player",
         createdAt: "2026-04-02T22:01:00Z"
     },
     {
         _id: "m13",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Honestly that's the worst part",
+        text: "Yeah that’s what I’m thinking. Probably gonna refactor that next",
         createdAt: "2026-04-02T22:02:20Z"
     },
     {
         _id: "m14",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Alright new question",
+        text: "Nice. Anyway you tryna do something later?",
         createdAt: "2026-04-02T22:03:00Z"
     },
     {
         _id: "m15",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Go ahead",
+        text: "Yeah I’m down. What were you thinking?",
         createdAt: "2026-04-02T22:04:10Z"
     },
     {
         _id: "m16",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "If animals could talk which one would be the most annoying",
+        text: "Maybe hop on a game or something, or we could go get food",
         createdAt: "2026-04-02T22:05:00Z"
     },
     {
         _id: "m17",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Seagulls and it's not even close",
+        text: "I’m kinda hungry not gonna lie",
         createdAt: "2026-04-02T22:05:45Z"
     },
     {
         _id: "m18",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "They'd just yell 'MINE' at everything",
+        text: "Same. Want to grab something around like 7?",
         createdAt: "2026-04-02T22:06:20Z"
     },
     {
         _id: "m19",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "And steal your food while trash talking you",
+        text: "Yeah that works. I just need to finish a couple things first",
         createdAt: "2026-04-02T22:07:05Z"
     },
     {
         _id: "m20",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Yeah I'd never go outside again",
+        text: "Bet just text me when you’re ready",
         createdAt: "2026-04-02T22:08:00Z"
     },
     {
         _id: "m21",
         conversationId: "conv_001",
         senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Same honestly 😂",
+        text: "Will do 👍",
         createdAt: "2026-04-02T22:08:30Z"
     }
 ];
+
 function Conversation() {
 
     const [conversations, setConversations] = React.useState(fakeMessages);

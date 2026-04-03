@@ -5,10 +5,10 @@ import Conversation from "../components/Conversation.tsx";
 const ConversationPage = () => {
 
     return (
-        <div id="messagesWrapper">
-            <div id="messagesContainer">
-                <h1 id="messagesTitle">Friend Connector</h1>
-                <p id="messagesSubtitle">Messages</p>
+        <div id="conversationWrapper">
+            <div id="conversationContainer">
+                <h1 id="conversationTitle">Friend Connector</h1>
+                <p id="conversationSubtitle">Messages</p>
                 <Conversation />
             </div>
         </div>

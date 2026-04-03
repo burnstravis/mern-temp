@@ -34,7 +34,7 @@
     }
 }
 
-#conversationWrapper {
+#messagesWrapper {
     min-height: 100vh;
     background-color: #a89fd8;
     display: flex;
@@ -45,16 +45,9 @@
     box-sizing: border-box;
 }
 
-#conversationContainer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-    max-width: 560px;
-}
 
-#conversationTitle {
+
+#messagesTitle {
     font-family: 'Brush Script MT', 'Dancing Script', cursive;
     font-size: 64px;
     color: #ffffff;
@@ -63,7 +56,7 @@
     text-shadow: 1px 2px 6px rgba(0,0,0,0.15);
 }
 
-#conversationSubtitle {
+#messagesSubtitle {
     font-family: Georgia, 'Times New Roman', serif;
     font-style: italic;
     font-size: 18px;
@@ -72,7 +65,7 @@
     text-align: center;
 }
 
-.conversationContainer {
+.conversations {
     background-color: #f0edff;
     border-radius: 20px;
     display: flex;
@@ -89,35 +82,12 @@
     border-radius: 20px;
 }
 
-.messageReceiverName {
-    color: var(--text-sent);
-}
-
-.todaysPrompt {
-    background-color: var(--bg-send-button);
-    border-radius: 20px;
-    display: flex;
-}
-
-#promptMessage {
-    font-size: 16px;
-    font-style: italic;
-    font-weight: bold;
-    color: var(--text-received);
-}
-#promptHeader {
-    font-size: 16px;
-    color: var(--text-received);
-    font-style: italic;
-    font-weight: bold;
-}
-
 .messages{
     flex: 1;
     overflow-y: auto;
 }
 
-.conversationMessage{
+.conversationCard{
     justify-content: space-between;
     display: flex;
     background-color: rgba(240, 237, 255, 0);
@@ -127,14 +97,6 @@
     box-sizing: border-box;
     gap: 8px;
     align-items: center;
-}
-
-.conversationMessage.received {
-    flex-direction: row;
-}
-
-.conversationMessage.sent {
-    flex-direction: row-reverse;
 }
 
 
