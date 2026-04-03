@@ -46,10 +46,6 @@ exports.setApp = function (app, client) {
     app.post('/api/login', async (req, res, next) => {
         const { login, password, jwtToken } = req.body;
 
-        if (!jwtToken) {
-            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
-        }
-
         if (jwtToken) {
             try {
                 if (tokenHandler.isExpired(jwtToken)) {
@@ -64,15 +60,15 @@ exports.setApp = function (app, client) {
         let ret;
 
         try {
-            const results = await db.collection('Users').find({
-                Username: login,
-                Password: password
+            const results = await db.collection('users').find({
+                username: login,
+                passwordHash: password
             }).toArray();
 
             if (results.length > 0) {
                 const id = results[0]._id;
-                const fn = results[0].FirstName;
-                const ln = results[0].LastName;
+                const fn = results[0].firstName;
+                const ln = results[0].lastName;
 
                 const tokenData = tokenHandler.createToken(fn, ln, id);
 
@@ -83,6 +79,7 @@ exports.setApp = function (app, client) {
                     accessToken: tokenData.accessToken,
                     error: ''
                 };
+
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };
             }
@@ -95,14 +92,17 @@ exports.setApp = function (app, client) {
 
     app.post('/api/register', async (req, res, next) =>
     {
-        const { firstName, lastName, email, username, password } = req.body;
+        const { firstName, lastName, email, username, password, birthday } = req.body;
+
+        const bdObject = new Date(birthday);
 
         const newUser = {
-            FirstName: firstName,
-            LastName: lastName,
-            Email: email,
-            Username: username,
-            Password: password
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            username: username,
+            passwordHash: password,
+            birthday: bdObject
         };
 
         var error = '';
@@ -110,12 +110,18 @@ exports.setApp = function (app, client) {
         try {
             const db = client.db('COP4331Cards');
 
-            const existingUser = await db.collection('Users').findOne({ Login: username });
+            const existingUser = await db.collection('users').findOne({ Login: username });
+            const existingEmail = await db.collection('users').findOne({ Login: email });
+
+            if(!existingUser) {}
             if(existingUser){
                 return res.status(200).json({ error: 'Username already taken' });
             }
+            if(existingEmail){
+                return res.status(200).json({ error: 'Email already in use' });
+            }
 
-            await db.collection('Users').insertOne(newUser);
+            await db.collection('users').insertOne(newUser);
         } catch (e) {
             error = e.toString();
             return res.status(200).json({ error: error });

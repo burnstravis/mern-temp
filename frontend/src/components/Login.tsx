@@ -7,13 +7,13 @@ import md5 from '../../md5';
 function Login()
 {
     const [message,setMessage] = useState('');
-    const [loginName,setLoginName] = React.useState('');
-    const [loginPassword,setPassword] = React.useState('');
+    const [username,setLoginName] = React.useState('');
+    const [password,setPassword] = React.useState('');
     async function doLogin(event:any) : Promise<void>
     {
         event.preventDefault();
-        const hashedPassword = md5(loginPassword);
-        var obj = {login:loginName,password:hashedPassword};
+        const hashedPassword = md5(password);
+        var obj = {login:username,password:hashedPassword};
         var js = JSON.stringify(obj);
         try
         {
@@ -23,10 +23,7 @@ function Login()
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            console.log('response', response);
-
             const res = await response.json();
-
             const token = res.accessToken;
 
             if (!token || typeof token !== 'string') {

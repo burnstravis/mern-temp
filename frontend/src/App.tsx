@@ -5,6 +5,7 @@ import CardPage from './pages/CardPage.tsx';
 import RegisterPage from "./pages/RegisterPage.tsx";
 import LandingPage from "./pages/LandingPage.tsx";
 import { Navigate, Outlet } from 'react-router-dom';
+import ConversationPage from "./pages/ConversationPage.tsx";
 
 const ProtectedRoute = () => { //keeps unlogged in users from viewing certain pages
     const isLogged = localStorage.getItem('user_data');
@@ -21,6 +22,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route element={<ProtectedRoute />}>
                 <Route path="/cards" element={<CardPage />} />
+                <Route path="/conversation" element={<ConversationPage />} />
             </Route>
         </Routes>
       </BrowserRouter>

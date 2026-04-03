@@ -8,6 +8,7 @@ interface RegisterForm {
   email: string;
   username: string;
   password: string;
+  birthday: string;
   confirmPassword: string;
 }
 
@@ -22,6 +23,7 @@ const Register: React.FC = () => {
     email: '',
     username: '',
     password: '',
+    birthday: '',
     confirmPassword: ''
   });
 
@@ -59,6 +61,13 @@ const Register: React.FC = () => {
       return false;
     }
 
+    if(formData.birthday) {
+      const birthDay = new Date(formData.birthday);
+      if(isNaN(birthDay.getTime())) {
+        setError('Please enter a valid date.');
+      }
+    }
+
     return true;
   };
 
@@ -78,7 +87,8 @@ const Register: React.FC = () => {
           lastName: formData.lastName,
           email: formData.email,
           username: formData.username,
-          password: md5(formData.password)
+          password: md5(formData.password),
+          birthday: formData.birthday
         })
       });
 
@@ -96,7 +106,8 @@ const Register: React.FC = () => {
         email: '',
         username: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        birthday: ''
       });
 
       setTimeout(() => { window.location.href = '/login'; }, 1500);
@@ -164,6 +175,18 @@ const Register: React.FC = () => {
           placeholder="Choose a username"
           value={formData.username}
           onChange={handleChange}
+        />
+      </div>
+
+      <div className="fieldGroup">
+        <label className="label">Birthday</label>
+        <input
+            type="text"
+            name="birthday"
+            className="input"
+            placeholder="XX-XX-XXXX"
+            value={formData.birthday}
+            onChange={handleChange}
         />
       </div>
 
