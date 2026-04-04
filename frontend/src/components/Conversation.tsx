@@ -1,159 +1,157 @@
 import React, { useState } from 'react';
 import { buildPath } from './path';
 import {retrieveToken, storeToken} from '../tokenStorage';
+import styles from '../pages/ConversationsPage.module.css'
 
-
-//fake data
 const fakeMessages = [
     {
         _id: "m1",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yo what are you doing right now",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Yo random question",
         createdAt: "2026-04-02T21:50:00Z"
     },
     {
         _id: "m2",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Nothing much, just eating breakfast lol",
+        text: "This already sounds dangerous",
         createdAt: "2026-04-02T21:52:00Z"
     },
     {
         _id: "m3",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Breakfast at 5pm is crazy",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Would you rather fight 1 horse-sized duck or 100 duck-sized horses",
         createdAt: "2026-04-02T21:53:30Z"
     },
     {
         _id: "m4",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Don’t judge me, my sleep schedule is cooked",
+        text: "100 duck-sized horses easy",
         createdAt: "2026-04-02T21:54:10Z"
     },
     {
         _id: "m5",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Same tbh. I stayed up till like 4 finishing stuff",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Nah you're underestimating the swarm",
         createdAt: "2026-04-02T21:55:00Z"
     },
     {
         _id: "m6",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Working on that project still?",
+        text: "Bro it's tiny horses, just start kicking",
         createdAt: "2026-04-02T21:55:45Z"
     },
     {
         _id: "m7",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yeah the MLB one, trying to optimize the backend. It’s kinda slow rn",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "You think you'd win against 100 of anything??",
         createdAt: "2026-04-02T21:56:30Z"
     },
     {
         _id: "m8",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Didn’t you already add threading to that?",
+        text: "Confidence is key",
         createdAt: "2026-04-02T21:57:05Z"
     },
     {
         _id: "m9",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yeah but it’s kinda overkill on my server, I think I need to batch stuff better",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "That horse-sized duck is terrifying though",
         createdAt: "2026-04-02T21:58:10Z"
     },
     {
         _id: "m10",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Makes sense. Are you using MySQL for it?",
+        text: "Yeah one bite and it's over",
         createdAt: "2026-04-02T21:59:00Z"
     },
     {
         _id: "m11",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yeah MariaDB actually. Inserts are the slow part",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Exactly. At least with the small ones you have a chance",
         createdAt: "2026-04-02T22:00:15Z"
     },
     {
         _id: "m12",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "You should do bulk inserts instead of one per player",
+        text: "Also imagine explaining you lost to a giant duck",
         createdAt: "2026-04-02T22:01:00Z"
     },
     {
         _id: "m13",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yeah that’s what I’m thinking. Probably gonna refactor that next",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Honestly that's the worst part",
         createdAt: "2026-04-02T22:02:20Z"
     },
     {
         _id: "m14",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Nice. Anyway you tryna do something later?",
+        text: "Alright new question",
         createdAt: "2026-04-02T22:03:00Z"
     },
     {
         _id: "m15",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yeah I’m down. What were you thinking?",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Go ahead",
         createdAt: "2026-04-02T22:04:10Z"
     },
     {
         _id: "m16",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Maybe hop on a game or something, or we could go get food",
+        text: "If animals could talk which one would be the most annoying",
         createdAt: "2026-04-02T22:05:00Z"
     },
     {
         _id: "m17",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "I’m kinda hungry not gonna lie",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Seagulls and it's not even close",
         createdAt: "2026-04-02T22:05:45Z"
     },
     {
         _id: "m18",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Same. Want to grab something around like 7?",
+        text: "They'd just yell 'MINE' at everything",
         createdAt: "2026-04-02T22:06:20Z"
     },
     {
         _id: "m19",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Yeah that works. I just need to finish a couple things first",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "And steal your food while trash talking you",
         createdAt: "2026-04-02T22:07:05Z"
     },
     {
         _id: "m20",
         conversationId: "conv_001",
         senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Bet just text me when you’re ready",
+        text: "Yeah I'd never go outside again",
         createdAt: "2026-04-02T22:08:00Z"
     },
     {
         _id: "m21",
         conversationId: "conv_001",
-        senderId: "64f1a2b3c4d5e6f7g8h9i0j2",
-        text: "Will do 👍",
+        senderId: "69cc1a6778e6bd166a893917",
+        text: "Same honestly 😂",
         createdAt: "2026-04-02T22:08:30Z"
     }
 ];
-
 function Conversation() {
 
     const [conversations, setConversations] = React.useState(fakeMessages);
@@ -203,38 +201,33 @@ function Conversation() {
     //loadConversations();
 
     return (
-        <div className="conversationContainer">
-            <div className="conversationHeader">
-                <h1 className="messageReceiverName">Bob</h1>
-                <div className="todaysPrompt">
-                    <p id="promptHeader">Today's Prompt</p>
-                    <p id="promptMessage">"if you were a ghost, how would you mildly inconvenience people?"</p>
+        <div className={styles.conversationView}>
+            <div className={styles.conversationHeader}>
+                <h1 className={styles.messageReceiverName}>Bob</h1>
+                <div className={styles.todaysPrompt}>
+                    <p id={styles.promptHeader}>Today's Prompt</p>
+                    <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenienceinconvenience people?"</p>
                 </div>
             </div>
-            <div className="messages">
+
+            <div className={styles.messages}>
                 {conversations.map((msg) => {
                     const isMe = msg.senderId === userId;
                     return (
-                        <div key={msg._id} className={`conversationMessage ${isMe ? 'sent' : 'received'}`}>
-                            <p id="conversationText">{msg.text}</p>
-                            <span className="conversationTimestamp">
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div key={msg._id}
+                             className={`${styles.conversationMessage} ${isMe ? styles.sent : styles.received}`}>
+                            <p id={styles.conversationText}>{msg.text}</p>
+                            <span className={styles.conversationTimestamp}>
+                                {new Date(msg.createdAt).toLocaleTimeString()}
+                            </span>
                         </div>
                     );
                 })}
             </div>
 
-            <div className="messageInputWrapper">
-                    <input
-                        type="text"
-                        id="messageInputText"
-                        placeholder="message"
-                        autoFocus={true}
-                        autoComplete="on"
-                        autoCapitalize="on"
-                    />
-                    <button type="button" id="messageInputButton">Send</button>
+            <div className={styles.messageInputWrapper}>
+                <input type="text" id={styles.messageInputText} placeholder="message" />
+                <button type="button" id={styles.messageInputButton}>Send</button>
             </div>
         </div>
     );

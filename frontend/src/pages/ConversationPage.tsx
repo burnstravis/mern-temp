@@ -1,14 +1,14 @@
 // LandingPage.tsx
-import './ConversationPage.css';
+import styles from './ConversationsPage.module.css';
 import Conversation from "../components/Conversation.tsx";
 
 const ConversationPage = () => {
 
     return (
-        <div id="conversationWrapper">
-            <div id="conversationContainer">
-                <h1 id="conversationTitle">Friend Connector</h1>
-                <p id="conversationSubtitle">Messages</p>
+        <div className={styles.conversationWrapper}>
+            <div className={styles.conversationContainer}>
+                <h1 className={styles.conversationTitle}>Friend Connector</h1>
+                <p className={styles.conversationSubtitle}>Messages</p>
                 <Conversation />
             </div>
         </div>

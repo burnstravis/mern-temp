@@ -18,14 +18,13 @@ function App() {
   return (
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route element={<ProtectedRoute />}>
                 <Route path="/cards" element={<CardPage />} />
                 <Route path="/conversation" element={<ConversationPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
-
             </Route>
         </Routes>
       </BrowserRouter>

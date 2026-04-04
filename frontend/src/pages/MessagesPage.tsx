@@ -1,14 +1,16 @@
 // LandingPage.tsx
-import './MessagesPage.css';
+import styles from './MessagesPage.module.css';
 import Messages from "../components/Messages.tsx";
 
 const MessagesPage = () => {
 
     return (
-        <div id="messagesWrapper">
-            <h1 id="messagesTitle">Friend Connector</h1>
-            <p id="messagesSubtitle">Messages</p>
-            <Messages />
+        <div className={styles.messagesWrapper}>
+            <div className={styles.messagesContainer}>
+                <h1 className={styles.messagesTitle}>Friend Connector</h1>
+                <p className={styles.messagesSubtitle}>Messages</p>
+                <Messages />
+            </div>
         </div>
     );
 };

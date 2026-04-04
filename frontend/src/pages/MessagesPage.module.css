@@ -1,0 +1,109 @@
+.messagesWrapper {
+    min-height: 100vh;
+    background-color: #a89fd8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    border: 4px solid #7b6fc4;
+    box-sizing: border-box;
+}
+
+.messagesContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 560px;
+}
+
+.messagesTitle {
+    font-family: 'Brush Script MT', 'Dancing Script', cursive;
+    font-size: 64px;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+    text-align: center;
+    text-shadow: 1px 2px 6px rgba(0,0,0,0.15);
+}
+
+.messagesSubtitle {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: #f0edff;
+    margin: 0 0 16px 0;
+    text-align: center;
+}
+
+.allMessages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    background: #ffffff;
+    padding: 40px 20px;
+    border-radius: 20px;
+}
+
+.conversations {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    background: none;
+    width: 80%;
+    justify-content: center;
+}
+
+
+.conversationCard{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background: #afa9ec;
+    border-radius: 10px;
+    margin: 8px 0;
+    cursor: pointer;
+    width: 100%;
+}
+
+.conversationAvatar{
+    text-align: left;
+    display: flex;
+    color: var(--text-dm-name);
+    font-size: 20px;
+    font-weight: bold;
+    font-style: italic;
+    width: 100%;
+}
+
+.conversationDetails {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dm-details);
+    width: 100%;
+}
+
+.lastText {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: normal;
+    font-size: 16px;
+    color: rgba(0, 0, 0, 0.79);
+    margin: 0;
+    width: 80%;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
+}
+
+.timestamp {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: normal;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.6);
+}

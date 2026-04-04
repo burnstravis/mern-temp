@@ -1,40 +1,4 @@
-:root {
-    --text: #6b6375;
-    --text-h: #08060d;
-    --text-sent: #ffffff;
-    --text-received: #08060d;
-    --bg: #fff;
-    --border: #e5e4e7;
-    --code-bg: #f4f3ec;
-    --accent: #aa3bff;
-    --accent-bg: rgba(170, 59, 255, 0.1);
-    --recieved-bg: rgb(175, 169, 236);
-    --sent-bg: rgb(60, 52, 137);
-    --social-bg: rgba(244, 243, 236, 0.5);
-    --bg-send-button: rgb(240, 165, 0);
-    --shadow:
-            rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-    --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-    --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-    --mono: ui-monospace, Consolas, monospace;
-
-    font: 18px/145% var(--sans);
-    letter-spacing: 0.18px;
-    color-scheme: light dark;
-    color: var(--text);
-    background: var(--bg);
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-
-    @media (max-width: 1024px) {
-        font-size: 16px;
-    }
-}
-
-#conversationWrapper {
+.conversationWrapper {
     min-height: 100vh;
     background-color: #a89fd8;
     display: flex;
@@ -45,7 +9,7 @@
     box-sizing: border-box;
 }
 
-#conversationContainer {
+.conversationContainer {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -54,7 +18,7 @@
     max-width: 560px;
 }
 
-#conversationTitle {
+.conversationTitle {
     font-family: 'Brush Script MT', 'Dancing Script', cursive;
     font-size: 64px;
     color: #ffffff;
@@ -63,7 +27,7 @@
     text-shadow: 1px 2px 6px rgba(0,0,0,0.15);
 }
 
-#conversationSubtitle {
+.conversationSubtitle {
     font-family: Georgia, 'Times New Roman', serif;
     font-style: italic;
     font-size: 18px;
@@ -72,7 +36,7 @@
     text-align: center;
 }
 
-.conversationContainer {
+.conversationView {
     background-color: #f0edff;
     border-radius: 20px;
     display: flex;
@@ -87,6 +51,7 @@
 .conversationHeader {
     background-color: var(--sent-bg);
     border-radius: 20px;
+    width: 100%;
 }
 
 .messageReceiverName {
@@ -94,9 +59,10 @@
 }
 
 .todaysPrompt {
+    display: flex;
+    flex-direction: row;
     background-color: var(--bg-send-button);
     border-radius: 20px;
-    display: flex;
 }
 
 #promptMessage {
@@ -104,6 +70,10 @@
     font-style: italic;
     font-weight: bold;
     color: var(--text-received);
+    margin: 0;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 #promptHeader {
     font-size: 16px;
