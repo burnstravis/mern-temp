@@ -110,4 +110,39 @@ exports.setApp = function (app, client) {
 
         res.status(200).json({ results: _ret, error: error, jwtToken: refreshedToken });
     });
+
+
+        app.post('/api/addcard', async (req, res, next) =>
+    {
+        const { userId, card, jwtToken } = req.body;
+
+        try {
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', jwtToken: '' });
+            }
+        } catch (e) {
+            console.log(e.message);
+        }
+
+        const newCard = { Card: card, UserId: userId };
+        var error = '';
+
+        try {
+            const db = client.db('COP4331Cards');
+            await db.collection('Cards').insertOne(newCard);
+        } catch (e) {
+            error = e.toString();
+        }
+
+        var refreshedToken = null;
+        try {
+            const refreshed = tokenHandler.refresh(jwtToken);
+            refreshedToken = refreshed.accessToken;
+        } catch (e) {
+            console.log(e.message);
+        }
+
+        res.status(200).json({ error: error, jwtToken: refreshedToken });
+    });
 }
+
