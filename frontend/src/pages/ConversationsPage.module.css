@@ -46,12 +46,14 @@
     width: 100%;
     max-width: 560px;
     max-height: 800px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .conversationHeader {
     background-color: var(--sent-bg);
     border-radius: 20px;
     width: 100%;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .messageReceiverName {
@@ -97,6 +99,7 @@
     box-sizing: border-box;
     gap: 8px;
     align-items: center;
+
 }
 
 .conversationMessage.received {
@@ -120,6 +123,7 @@
     word-break: break-word;
     white-space: pre-wrap;
     padding: 8px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }
 .sent #conversationText {
     text-align: right;
@@ -152,8 +156,10 @@
 
 #messageInputText {
     display: flex;
-    background: var(--bg);
-    color: var(--text-received);
+    background: #ffffff;
+    color: rgba(0, 0, 0, 0.7);
+    font-size: 16px;
+    font-style: normal;
     min-height: 30px;
     width: 100%;
     border: none;

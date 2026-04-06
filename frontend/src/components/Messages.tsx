@@ -10,7 +10,7 @@ const fakeConversations = [
         participants: ["user_123", "friend_456"],
         lastMessageAt: "2026-04-03T10:30:00Z",
         otherUserName: "Sarah",
-        lastText: "See you at the team meeting!"
+        lastText: "See you at the teamteamteamteamteamteamteamteamteamteamteamteamteamteam meeting!"
     },
     {
         _id: "conv_002",
@@ -27,7 +27,7 @@ const fakeConversations = [
         lastText: "where u at man"
     },
     {
-        _id: "conv_002",
+        _id: "conv_004",
         participants: ["user_123222", "friend_789123"],
         lastMessageAt: "2026-04-02T15:45:00Z",
         otherUserName: "Bob",
@@ -38,6 +38,8 @@ const fakeConversations = [
 function Messages() {
 
     const [conversations, setConversations] = React.useState(fakeConversations);
+    const [loading, setLoading] = useState(true);
+    const [searchText, setSearchText] = useState('');
 
 
     const _ud = localStorage.getItem('user_data');
@@ -60,27 +62,102 @@ function Messages() {
         return `${Math.floor(diffInSeconds / 604800)}w`;
     };
 
-    async function loadConversation(){
+    async function fetchConversation(){
         console.log("Pretend this opens the chat");
+
+
+        try {
+            const token = retrieveToken();
+            const response = await fetch(buildPath('api/listConversations'), {
+                method: 'POST',
+                body: JSON.stringify({ userId: userId }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const res = await response.json();
+
+            if (res.error && res.error.length > 0) {
+                setResults("API Error: " + res.error);
+                return;
+            } else {
+                setConversations(res.conversations || []);
+            }
+        } catch (e) {
+            console.error("Failed to load conversations", e);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function loadConversation(conversationId){
+
+        console.log("Loading conversation...");
+
+        console.log("Pretend this opens the chat");
+    }
+
+    async function createConversation(){
+        console.log("Pretend this creates a new chat with a friend");
+
+        // if (!searchText.trim()) return;
+        //
+        // const token = retrieveToken();
+        // const obj = { userId: userId, recipientName: searchText, jwtToken: token };
+        // const js = JSON.stringify(obj);
+        //
+        // try {
+        //     const response = await fetch(buildPath('api/createConversation'), {
+        //         method: 'POST',
+        //         body: js,
+        //         headers: { 'Content-Type': 'application/json' }
+        //     });
+        //
+        //     const res = await response.json();
+        //
+        //     if (res.error && res.error.length > 0) {
+        //         setResults("API Error: " + res.error);
+        //         return;
+        //     } else {
+        //         setConversations([res.newConversation, ...conversations]);
+        //         setSearchText("");
+        //     }
+        //
+        //     if (res.accessToken) storeToken(res.accessToken);
+        //
+        //     const _results = res.results || [];
+        //     setCardList(_results.join(', '));
+        //     setResults('Card(s) have been retrieved');
+        //
+        // } catch (error: any) {
+        //     setResults("Search failed: " + error.toString());
+        // }
     }
 
     return (
         <div className={styles.allMessages}>
 
-            <div className={styles.conversationHeader}>
-                <input
-                    type="text"
-                    id={styles.conversationSearch}
-                    placeholder="Search"
-                    autoFocus={true}
-                    autoComplete="off"
-                    autoCapitalize="off"
-                />
-            </div>
-
             <div className={styles.conversations}>
+
+                <div className={styles.conversationHeader}>
+                    <input
+                        type="text"
+                        id={styles.conversationSearch}
+                        placeholder="Search username"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        autoFocus={true}
+                        autoComplete="off"
+                        autoCapitalize="off"
+                    />
+
+                    <button id={styles.addConversationButton} type="button" onClick={() => createConversation()}>Add</button>
+                </div>
+
+
                 {conversations.map((conv) => (
-                    <div key={conv._id} className={styles.conversationCard} onClick={loadConversation}>
+                    <div key={conv._id} className={styles.conversationCard} onClick={() => loadConversation(conv._id)}>
                         <div className={styles.conversationAvatar}>
                             {conv.otherUserName}
                         </div>

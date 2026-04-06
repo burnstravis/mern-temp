@@ -134,7 +134,7 @@ const fakeMessages = [
         _id: "m19",
         conversationId: "conv_001",
         senderId: "69cc1a6778e6bd166a893917",
-        text: "And steal your food while trash talking you",
+        text: "And steal your foodteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteam while trash talking you",
         createdAt: "2026-04-02T22:07:05Z"
     },
     {
