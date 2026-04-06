@@ -8,5 +8,5 @@ export const buildPath = (route: string): string => {
     //     return 'http://localhost:3000/' + route;
     // }
 
-    return 'https://largeproject.nathanfoss.me';
+    return 'https://' + app_name + '/' + route;
 };
