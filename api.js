@@ -43,24 +43,11 @@ exports.setApp = function (app, client) {
         res.status(200).json({ error: error, jwtToken: refreshedToken });
     });
 
-    app.post('/api/login', async (req, res, next) => {
-        const { login, password, jwtToken } = req.body;
+    app.post('/api/login', async (req, res, next) => 
+    {
+        const { login, password } = req.body; 
 
-        if (!jwtToken) {
-            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
-        }
-
-        if (jwtToken) {
-            try {
-                if (tokenHandler.isExpired(jwtToken)) {
-                    return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
-                }
-            } catch (e) {
-                console.log("JWT Check Error:", e.message);
-            }
-        }
-
-        const db = client.db('COP4331Cards');
+        const db = client.db('large_project'); 
         let ret;
 
         try {
@@ -74,6 +61,7 @@ exports.setApp = function (app, client) {
                 const fn = results[0].FirstName;
                 const ln = results[0].LastName;
 
+                // Generate the NEW token for the user
                 const tokenData = tokenHandler.createToken(fn, ln, id);
 
                 ret = {
