@@ -110,14 +110,14 @@ exports.setApp = function (app, client) {
             return res.status(400).json({ error: 'Email is required.'});
         }
 
-        try {const db = client.db('large_project');
+        try {
+            const db = client.db('large_project');
 
             const user = await db.collection('users').findOne({email: email, verified: true});
 
             if(!user.verified){
-                res.status
+                res.status(400).json({ error: 'NOT VERIFIED'});
             }
-            res.status
 
             await mailer.sendMail({
                 from: process.env.EMAIL_USER,
@@ -126,8 +126,13 @@ exports.setApp = function (app, client) {
                 text: `!\n\nYour password is: ${hashPassword}\n\nEnter this code on the app to complete your registration.
                 This email is a test if it is correct. TO BE REWRITTEN.`
             });
+
+            res.status(200).json({ error: "SENT RECOVERY PASSWORD TO EMAIL"});
         }
-    }
+        catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
 
     // Add friends API soon
     /*app.post('/api/addcard', async (req, res, next) =>
