@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import { storeToken } from '../tokenStorage';
 import { jwtDecode } from 'jwt-decode';
+// @ts-ignore
+import md5 from '../../md5';
 function Login()
 {
     const [message,setMessage] = useState('');
@@ -10,7 +12,8 @@ function Login()
     async function doLogin(event:any) : Promise<void>
     {
         event.preventDefault();
-        var obj = {login:loginName,password:loginPassword};
+        const hashedPassword = md5(loginPassword);
+        var obj = {login:loginName,password:hashedPassword};
         var js = JSON.stringify(obj);
         try
         {
@@ -19,6 +22,8 @@ function Login()
                 body: js,
                 headers: { 'Content-Type': 'application/json' }
             });
+
+            console.log('response', response);
 
             const res = await response.json();
 
@@ -44,7 +49,7 @@ function Login()
                     localStorage.setItem('user_data', JSON.stringify(user));
                     setMessage('');
 
-                    window.location.href = '/cards';
+                    window.location.href = '/login';
                 }
             } catch (e) {
                 console.log(e);
@@ -55,6 +60,7 @@ function Login()
             alert(error.toString());
             return;
         }
+
     };
     function handleSetLoginName( e: any ) : void
     {

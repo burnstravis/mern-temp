@@ -3,13 +3,26 @@ import './App.css';
 import LoginPage from './pages/LoginPage.tsx';
 import CardPage from './pages/CardPage.tsx';
 import Register from './components/register.tsx';
+import RegisterPage from "./pages/RegisterPage.tsx";
+import LandingPage from "./pages/LandingPage.tsx";
+import { Navigate, Outlet } from 'react-router-dom';
+
+const ProtectedRoute = () => { //keeps unlogged in users from viewing certain pages
+    const isLogged = localStorage.getItem('user_data');
+
+    return isLogged ? <Outlet /> : <Navigate to="/" replace />;
+};
+
 function App() {
   return (
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/cards" element={<CardPage />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<LandingPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute />}>
+                <Route path="/cards" element={<CardPage />} />
+            </Route>
         </Routes>
       </BrowserRouter>
   );
