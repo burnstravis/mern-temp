@@ -101,6 +101,34 @@ exports.setApp = function (app, client) {
         }
     });
 
+
+    app.post('/api/email-recovery', async (req, res) => {
+
+        const{email} = req.body; 
+
+        if(!email){
+            return res.status(400).json({ error: 'Email is required.'});
+        }
+
+        try {const db = client.db('large_project');
+
+            const user = await db.collection('users').findOne({email: email, verified: true});
+
+            if(!user.verified){
+                res.status
+            }
+            res.status
+
+            await mailer.sendMail({
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
+                text: `!\n\nYour password is: ${hashPassword}\n\nEnter this code on the app to complete your registration.
+                This email is a test if it is correct. TO BE REWRITTEN.`
+            });
+        }
+    }
+
     // Add friends API soon
     /*app.post('/api/addcard', async (req, res, next) =>
     {
