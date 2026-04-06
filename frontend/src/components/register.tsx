@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { buildPath } from './path';
 
+// Struct
 interface RegisterForm {
   firstName: string;
   lastName: string;
@@ -9,10 +11,7 @@ interface RegisterForm {
   confirmPassword: string;
 }
 
-interface RegisterResponse {
-  error: string;
-}
-
+// Initialize
 const Register: React.FC = () => {
   const [formData, setFormData] = useState<RegisterForm>({
     firstName: '',
@@ -23,39 +22,34 @@ const Register: React.FC = () => {
     confirmPassword: ''
   });
 
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [step, setStep] = useState<'register' | 'verify'>('register');
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const validateForm = (): boolean => {
-    // Check all fields are filled
-    if (!formData.firstName || !formData.lastName || !formData.email || 
+    if (!formData.firstName || !formData.lastName || !formData.email ||
         !formData.username || !formData.password || !formData.confirmPassword) {
       setError('All fields are required.');
       return false;
     }
 
-    // Check valid email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address.');
       return false;
     }
 
-    // Check password length
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters.');
       return false;
     }
 
-    // Check passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
       return false;
@@ -64,7 +58,7 @@ const Register: React.FC = () => {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+  const handleRegisterSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -72,7 +66,7 @@ const Register: React.FC = () => {
     if (!validateForm()) return;
 
     try {
-      const response = await fetch('/api/register', {
+      const response = await fetch(buildPath('api/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,109 +78,156 @@ const Register: React.FC = () => {
         })
       });
 
-      const data: RegisterResponse = await response.json();
+      const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.error || 'Registration failed. Please try again.');
+      if (data.error) {
+        setError(data.error);
         return;
       }
 
-      setSuccess('Account created successfully! You can now log in.');
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        username: '',
-        password: '',
-        confirmPassword: ''
-      });
-
+      setSuccess('A verification code has been sent to ' + formData.email);
+      setStep('verify');
     } catch (err) {
       setError('Server error. Please try again later.');
     }
   };
 
+  const handleVerifySubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!verificationCode.trim()) {
+      setError('Please enter your verification code.');
+      return;
+    }
+
+    try {
+      const response = await fetch(buildPath('api/verify-email'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          code: verificationCode
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+
+      setSuccess('Email verified! Your account is ready. You can now log in.');
+      setStep('register');
+      setFormData({
+        firstName: '', lastName: '', email: '',
+        username: '', password: '', confirmPassword: ''
+      });
+      setVerificationCode('');
+    } catch (err) {
+      setError('Server error. Please try again later.');
+    }
+  };
+
+  if (step === 'verify') {
+    return (
+      <div id="registerDiv">
+        <span id="inner-title">VERIFY YOUR EMAIL</span><br />
+        <p>Enter the 6-digit code sent to <strong>{formData.email}</strong>.</p>
+        <form onSubmit={handleVerifySubmit}>
+          <div>
+            Verification Code:&nbsp;
+            <input
+              type="text"
+              id="verificationCode"
+              value={verificationCode}
+              onChange={e => setVerificationCode(e.target.value)}
+              placeholder="Enter 6-digit code"
+              maxLength={6}
+            />
+          </div>
+
+          {error && <span id="registerResult" style={{ color: 'red' }}>{error}</span>}
+          {success && <span id="registerResult" style={{ color: 'green' }}>{success}</span>}
+          <br />
+
+          <input type="submit" className="buttons" value="Verify" />
+          &nbsp;
+          <button type="button" onClick={() => { setStep('register'); setError(''); setSuccess(''); }}>
+            Back
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h2>Create an Account</h2>
-      <form onSubmit={handleSubmit}>
+    <div id="registerDiv">
+      <span id="inner-title">CREATE AN ACCOUNT</span><br />
+      <form onSubmit={handleRegisterSubmit}>
 
-        <div>
-          <label htmlFor="firstName">First Name</label>
-          <input
-            type="text"
-            id="firstName"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            placeholder="Enter your first name"
-          />
-        </div>
+        First Name:&nbsp;
+        <input
+          type="text"
+          name="firstName"
+          value={formData.firstName}
+          onChange={handleChange}
+          placeholder="First name"
+        /><br />
 
-        <div>
-          <label htmlFor="lastName">Last Name</label>
-          <input
-            type="text"
-            id="lastName"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            placeholder="Enter your last name"
-          />
-        </div>
+        Last Name:&nbsp;
+        <input
+          type="text"
+          name="lastName"
+          value={formData.lastName}
+          onChange={handleChange}
+          placeholder="Last name"
+        /><br />
 
-        <div>
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter your email"
-          />
-        </div>
+        Email:&nbsp;
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="Email address"
+        /><br />
 
-        <div>
-          <label htmlFor="username">Username</label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            placeholder="Choose a username"
-          />
-        </div>
+        Username:&nbsp;
+        <input
+          type="text"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          placeholder="Username"
+        /><br />
 
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Create a password"
-          />
-        </div>
+        Password:&nbsp;
+        <input
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Password (min 8 chars)"
+        /><br />
 
-        <div>
-          <label htmlFor="confirmPassword">Confirm Password</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            placeholder="Confirm your password"
-          />
-        </div>
+        Confirm Password:&nbsp;
+        <input
+          type="password"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          placeholder="Confirm password"
+        /><br />
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {success && <p style={{ color: 'green' }}>{success}</p>}
+        {error && <span id="registerResult" style={{ color: 'red' }}>{error}</span>}
+        {success && <span id="registerResult" style={{ color: 'green' }}>{success}</span>}
+        <br />
 
-        <button type="submit">Register</button>
+        <input type="submit" className="buttons" value="Register" />
+        <span>&nbsp;Already have an account? <a href="/">Log in</a></span>
 
       </form>
     </div>
