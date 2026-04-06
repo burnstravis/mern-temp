@@ -15,7 +15,6 @@ const mailer = nodemailer.createTransport({
 
 exports.setApp = function (app, client) {
 
-    // Step 1: Register — hash password, store pending user, email a 6-digit code
     app.post('/api/register', async (req, res) => {
         const { firstName, lastName, email, username, password } = req.body;
 
@@ -24,38 +23,45 @@ exports.setApp = function (app, client) {
         }
 
         try {
-            const db = client.db('COP4331Cards');
+            const db = client.db('large_project');
 
-            const existingUser = await db.collection('users').findOne({ Login: username });
+   
+            const existingUser = await db.collection('users').findOne({ username: username, verified: true });
+            const existingEmail = await db.collection('users').findOne({ email: email, verified: true });
+
+
             if (existingUser) {
                 return res.status(400).json({ error: 'Username already taken.' });
             }
-
-            const existingEmail = await db.collection('users').findOne({ Email: email });
             if (existingEmail) {
                 return res.status(400).json({ error: 'Email already registered.' });
             }
 
+
             const hashedPassword = await bcrypt.hash(password, 10);
-            const verificationCode = crypto.randomInt(100000, 999999).toString();
 
-            // Replace any existing pending registration for this email
-            await db.collection('PendingUsers').deleteMany({ Email: email });
+            // Five Digit Code
+            const verificationCode = crypto.randomInt(10000, 99999).toString();
 
-            await db.collection('PendingUsers').insertOne({
-                FirstName: firstName,
-                LastName: lastName,
-                Email: email,
-                Login: username,
-                Password: hashedPassword,
-                VerificationCode: verificationCode
+            // Remove any previous unverified attempt for this email before inserting fresh
+            await db.collection('users').deleteMany({ email: email, verified: false });
+
+            await db.collection('users').insertOne({
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                username: username,
+                password: hashedPassword,
+                verificationCode: verificationCode,
+                verified: false
             });
 
             await mailer.sendMail({
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'Friend Connector — Verify Your Email',
-                text: `Welcome to Friend Connector!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the app to complete your registration.`
+                subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
+                text: `!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the app to complete your registration.
+                This email is a test if it is correct. TO BE REWRITTEN.`
             });
 
             res.status(200).json({ error: '' });
@@ -64,7 +70,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-    // Step 2: Verify email — validate code, insert verified user into 'users' collection
     app.post('/api/verify-email', async (req, res) => {
         const { email, code } = req.body;
 
@@ -73,31 +78,22 @@ exports.setApp = function (app, client) {
         }
 
         try {
-            const db = client.db('COP4331Cards');
+            const db = client.db('large_project');
 
-            const pending = await db.collection('PendingUsers').findOne({ Email: email });
+            const user = await db.collection('users').findOne({ email: email, verified: false });
 
-            if (!pending) {
+            if (!user) {
                 return res.status(400).json({ error: 'No pending registration found for this email.' });
             }
 
-            if (pending.VerificationCode !== code.trim()) {
-                return res.status(400).json({ error: 'Invalid verification code.' });
+            if (user.verificationCode !== code.trim()) {
+                return res.status(400).json({ error: 'WRONG CODE.' });
             }
 
-            const allUsers = await db.collection('users').find({}, { projection: { UserId: 1 } }).toArray();
-            const nextId = allUsers.length > 0 ? Math.max(...allUsers.map(u => u.UserId || 0)) + 1 : 1;
-
-            await db.collection('users').insertOne({
-                UserId: nextId,
-                FirstName: pending.FirstName,
-                LastName: pending.LastName,
-                Email: pending.Email,
-                Login: pending.Login,
-                Password: pending.Password
-            });
-
-            await db.collection('PendingUsers').deleteOne({ Email: email });
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { verified: true }, $unset: { verificationCode: '' } }
+            );
 
             res.status(200).json({ error: '' });
         } catch (e) {
@@ -152,26 +148,29 @@ exports.setApp = function (app, client) {
             }
         }
 
-        const db = client.db('COP4331Cards');
+        const db = client.db('large_project');
         let ret;
 
         try {
-            const user = await db.collection('users').findOne({ Login: login });
+            const user = await db.collection('users').findOne({ username: login });
 
-            if (user && await bcrypt.compare(password, user.Password)) {
-                const id = user.UserId;
-                const fn = user.FirstName;
-                const ln = user.LastName;
+            if (user && await bcrypt.compare(password, user.password)) {
+                if (!user.verified) {
+                    ret = { error: 'ACCOUNT HAS NOT BEEN VERIFIED', accessToken: '' };
+                } else {
+                    const fn = user.firstName;
+                    const ln = user.lastName;
 
-                const tokenData = tokenHandler.createToken(fn, ln, id);
+                    const tokenData = tokenHandler.createToken(fn, ln, user._id);
 
-                ret = {
-                    id: id,
-                    firstName: fn,
-                    lastName: ln,
-                    accessToken: tokenData.accessToken,
-                    error: ''
-                };
+                    ret = {
+                        id: user._id,
+                        firstName: fn,
+                        lastName: ln,
+                        accessToken: tokenData.accessToken,
+                        error: ''
+                    };
+                }
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };
             }
