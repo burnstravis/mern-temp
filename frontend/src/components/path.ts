@@ -1,4 +1,4 @@
-const app_name = 'localhost:3000';
+const app_name = 'largeproject.nathanfoss.me';
 
 export const buildPath = (route: string): string => {
 
