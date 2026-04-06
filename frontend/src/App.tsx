@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './App.css';
 import LoginPage from './pages/LoginPage.tsx';
 import CardPage from './pages/CardPage.tsx';
+import Register from './components/register.tsx';
 import RegisterPage from "./pages/RegisterPage.tsx";
 import LandingPage from "./pages/LandingPage.tsx";
 import { Navigate, Outlet } from 'react-router-dom';
