@@ -95,7 +95,7 @@ exports.setApp = function (app, client) {
                 { $set: { verified: true }, $unset: { verificationCode: '' } }
             );
 
-            res.status(200).json({ error: '' });
+            res.status(200).json({ error: 'SUCCESSFULLY VERIFIED' });
         } catch (e) {
             res.status(500).json({ error: e.toString() });
         }
@@ -164,6 +164,8 @@ exports.setApp = function (app, client) {
                         accessToken: tokenData.accessToken,
                         error: ''
                     };
+
+                    res.status(200).json({ error: 'LOGIN SUCCESSFUL'})
                 }
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };
