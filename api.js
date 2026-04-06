@@ -106,6 +106,10 @@ exports.setApp = function (app, client) {
     {
         const { userId, card, jwtToken } = req.body;
 
+        if (!jwtToken) {
+            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
+        }
+
         try {
             if (tokenHandler.isExpired(jwtToken)) {
                 return res.status(200).json({ error: 'The JWT is no longer valid', jwtToken: '' });
@@ -135,22 +139,12 @@ exports.setApp = function (app, client) {
         res.status(200).json({ error: error, jwtToken: refreshedToken });
     });*/
 
-    app.post('/api/login', async (req, res, next) => {
-        const { login, password, jwtToken } = req.body;
-
-        if (jwtToken) {
-            try {
-                if (tokenHandler.isExpired(jwtToken)) {
-                    return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
-                }
-            } catch (e) {
-                console.log("JWT Check Error:", e.message);
-            }
-        }
+    app.post('/api/login', async (req, res, next) => 
+    {
+        const { login, password } = req.body; 
 
         const db = client.db('large_project');
         let ret;
-
         try {
             const user = await db.collection('users').findOne({ username: login });
 
@@ -177,13 +171,46 @@ exports.setApp = function (app, client) {
         } catch (e) {
             ret = { error: e.toString() };
         }
-
         res.status(200).json(ret);
     });
 
 
     // Search Friends API soon
     /*app.post('/api/searchcards', async (req, res, next) =>
+    app.post('/api/register', async (req, res, next) =>
+    {
+        const { firstName, lastName, email, username, password } = req.body;
+
+        const newUser = {
+            FirstName: firstName,
+            LastName: lastName,
+            Email: email,
+            Username: username,
+            Password: password
+        };
+
+        var error = '';
+
+        try {
+            const db = client.db('COP4331Cards');
+
+            const existingUser = await db.collection('Users').findOne({ Login: username });
+            if(existingUser){
+                return res.status(200).json({ error: 'Username already taken' });
+            }
+
+            await db.collection('Users').insertOne(newUser);
+        } catch (e) {
+            error = e.toString();
+            return res.status(200).json({ error: error });
+        }
+
+        res.status(200).json({ error: error });
+    });
+
+
+
+    app.post('/api/searchcards', async (req, res, next) =>
     {
         var error = '';
         const { userId, search, jwtToken } = req.body;
