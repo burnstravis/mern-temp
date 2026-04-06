@@ -1,6 +1,6 @@
 require('express');
 require('mongodb');
-const tokenHandler = require('./createJWT.js'); //
+const tokenHandler = require('./createJWT.js'); 
 
 
 
@@ -49,25 +49,22 @@ exports.setApp = function (app, client) {
 
         const db = client.db('large_project'); 
         let ret;
-
         try {
-            const results = await db.collection('Users').find({
-                Username: login,
-                Password: password
+            const results = await db.collection('users').find({
+                username: login,  
+                passwordHash: password 
             }).toArray();
 
             if (results.length > 0) {
-                const id = results[0]._id;
-                const fn = results[0].FirstName;
-                const ln = results[0].LastName;
-
-                // Generate the NEW token for the user
-                const tokenData = tokenHandler.createToken(fn, ln, id);
+                const user = results[0];
+                
+                // Generate the token using the keys from your document
+                const tokenData = tokenHandler.createToken(user.firstName, user.lastName, user._id);
 
                 ret = {
-                    id: id,
-                    firstName: fn,
-                    lastName: ln,
+                    id: user._id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                     accessToken: tokenData.accessToken,
                     error: ''
                 };
@@ -77,7 +74,6 @@ exports.setApp = function (app, client) {
         } catch (e) {
             ret = { error: e.toString() };
         }
-
         res.status(200).json(ret);
     });
 
