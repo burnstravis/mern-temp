@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { buildPath } from './path';
+import md5 from "../../md5.ts";
+import { buildPath } from "./path.ts";
 
-// Struct
 interface RegisterForm {
   firstName: string;
   lastName: string;
@@ -11,7 +11,10 @@ interface RegisterForm {
   confirmPassword: string;
 }
 
-// Initialize
+interface RegisterResponse {
+  error: string;
+}
+
 const Register: React.FC = () => {
   const [formData, setFormData] = useState<RegisterForm>({
     firstName: '',
@@ -22,14 +25,15 @@ const Register: React.FC = () => {
     confirmPassword: ''
   });
 
-  const [verificationCode, setVerificationCode] = useState<string>('');
-  const [step, setStep] = useState<'register' | 'verify'>('register');
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -58,7 +62,7 @@ const Register: React.FC = () => {
     return true;
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent): Promise<void> => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -74,162 +78,129 @@ const Register: React.FC = () => {
           lastName: formData.lastName,
           email: formData.email,
           username: formData.username,
-          password: formData.password
+          password: md5(formData.password)
         })
       });
 
-      const data = await response.json();
+      const data: RegisterResponse = await response.json();
 
-      if (data.error) {
-        setError(data.error);
+      if (!response.ok) {
+        setError(data.error || 'Registration failed.');
         return;
       }
 
-      setSuccess('A verification code has been sent to ' + formData.email);
-      setStep('verify');
-    } catch (err) {
-      setError('Server error. Please try again later.');
-    }
-  };
-
-  const handleVerifySubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!verificationCode.trim()) {
-      setError('Please enter your verification code.');
-      return;
-    }
-
-    try {
-      const response = await fetch(buildPath('api/verify-email'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          code: verificationCode
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
-
-      setSuccess('Email verified! Your account is ready. You can now log in.');
-      setStep('register');
+      setSuccess('Account created! Redirecting...');
       setFormData({
-        firstName: '', lastName: '', email: '',
-        username: '', password: '', confirmPassword: ''
+        firstName: '',
+        lastName: '',
+        email: '',
+        username: '',
+        password: '',
+        confirmPassword: ''
       });
-      setVerificationCode('');
-    } catch (err) {
+
+      setTimeout(() => { window.location.href = '/login'; }, 1500);
+
+    } catch {
       setError('Server error. Please try again later.');
     }
   };
 
-  if (step === 'verify') {
-    return (
-      <div id="registerDiv">
-        <span id="inner-title">VERIFY YOUR EMAIL</span><br />
-        <p>Enter the 6-digit code sent to <strong>{formData.email}</strong>.</p>
-        <form onSubmit={handleVerifySubmit}>
-          <div>
-            Verification Code:&nbsp;
-            <input
-              type="text"
-              id="verificationCode"
-              value={verificationCode}
-              onChange={e => setVerificationCode(e.target.value)}
-              placeholder="Enter 6-digit code"
-              maxLength={6}
-            />
-          </div>
-
-          {error && <span id="registerResult" style={{ color: 'red' }}>{error}</span>}
-          {success && <span id="registerResult" style={{ color: 'green' }}>{success}</span>}
-          <br />
-
-          <input type="submit" className="buttons" value="Verify" />
-          &nbsp;
-          <button type="button" onClick={() => { setStep('register'); setError(''); setSuccess(''); }}>
-            Back
-          </button>
-        </form>
-      </div>
-    );
+  function goBack(): void {
+    window.location.href = '/';
   }
 
   return (
-    <div id="registerDiv">
-      <span id="inner-title">CREATE AN ACCOUNT</span><br />
-      <form onSubmit={handleRegisterSubmit}>
+    <div id="registerCard" className="card">
+      <p id="registerHeading" className="cardHeading">Create an account</p>
+      <p id="registerSubtext" className="cardSubtext">
+        Join and start connecting with friends
+      </p>
 
-        First Name:&nbsp;
-        <input
-          type="text"
-          name="firstName"
-          value={formData.firstName}
-          onChange={handleChange}
-          placeholder="First name"
-        /><br />
+      <div id="registerNameRow" className="fieldRow">
+        <div className="fieldGroup">
+          <label className="label">First Name</label>
+          <input
+            type="text"
+            name="firstName"
+            className="input"
+            placeholder="First name"
+            value={formData.firstName}
+            onChange={handleChange}
+          />
+        </div>
 
-        Last Name:&nbsp;
-        <input
-          type="text"
-          name="lastName"
-          value={formData.lastName}
-          onChange={handleChange}
-          placeholder="Last name"
-        /><br />
+        <div className="fieldGroup">
+          <label className="label">Last Name</label>
+          <input
+            type="text"
+            name="lastName"
+            className="input"
+            placeholder="Last name"
+            value={formData.lastName}
+            onChange={handleChange}
+          />
+        </div>
+      </div>
 
-        Email:&nbsp;
+      <div className="fieldGroup">
+        <label className="label">Email</label>
         <input
           type="email"
           name="email"
+          className="input"
+          placeholder="Enter your email"
           value={formData.email}
           onChange={handleChange}
-          placeholder="Email address"
-        /><br />
+        />
+      </div>
 
-        Username:&nbsp;
+      <div className="fieldGroup">
+        <label className="label">Username</label>
         <input
           type="text"
           name="username"
+          className="input"
+          placeholder="Choose a username"
           value={formData.username}
           onChange={handleChange}
-          placeholder="Username"
-        /><br />
+        />
+      </div>
 
-        Password:&nbsp;
+      <div className="fieldGroup">
+        <label className="label">Password</label>
         <input
           type="password"
           name="password"
+          className="input"
+          placeholder="Choose a password"
           value={formData.password}
           onChange={handleChange}
-          placeholder="Password (min 8 chars)"
-        /><br />
+        />
+      </div>
 
-        Confirm Password:&nbsp;
+      <div className="fieldGroup">
+        <label className="label">Confirm Password</label>
         <input
           type="password"
           name="confirmPassword"
+          className="input"
+          placeholder="Re-enter your password"
           value={formData.confirmPassword}
           onChange={handleChange}
-          placeholder="Confirm password"
-        /><br />
+        />
+      </div>
 
-        {error && <span id="registerResult" style={{ color: 'red' }}>{error}</span>}
-        {success && <span id="registerResult" style={{ color: 'green' }}>{success}</span>}
-        <br />
+      {error && <p className="errorMsg" style={{ color: 'red' }}>{error}</p>}
+      {success && <p className="errorMsg" style={{ color: 'green' }}>{success}</p>}
 
-        <input type="submit" className="buttons" value="Register" />
-        <span>&nbsp;Already have an account? <a href="/">Log in</a></span>
+      <button type="button" className="button" onClick={handleSubmit}>
+        Register
+      </button>
 
-      </form>
+      <button type="button" className="backButton" onClick={goBack}>
+        ← Back
+      </button>
     </div>
   );
 };
