@@ -3,6 +3,7 @@ import { buildPath } from './path';
 import { storeToken } from '../tokenStorage';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
+import styles from '../pages/LoginPage.module.css';
 // @ts-ignore
 function Login()
 {
@@ -71,17 +72,47 @@ function Login()
     {
         setPassword( e.target.value );
     }
-    return(
-        <div id="loginDiv">
-            <span id="inner-title">PLEASE LOG IN</span><br />
-            Login: <input type="text" id="loginName" placeholder="Username"
-                          onChange={handleSetLoginName} /><br />
-            Password: <input type="password" id="loginPassword" placeholder="Password"
-                             onChange={handleSetPassword} />
-            <input type="submit" id="loginButton" className="buttons" value = "Do It"
-                   onClick={doLogin} />
-            <span id="loginResult">{message}</span><br />
+    return (
+        <div className={styles.loginContainer}>
+            <h1 className={styles.loginTitle}>Login</h1>
+            <h2 className={styles.loginSubTitle}>Enter your details below</h2>
+
+            <form className={styles.loginForm}>
+                <div className={styles.inputDiv}>
+                    <label className={styles.inputLabel}>Username</label>
+                    <div className="input-container">
+                        <input
+                            type="text"
+                            className={styles.loginField}
+                            placeholder="Username"
+                            onChange={handleSetLoginName}
+                        />
+                    </div>
+                </div>
+
+                <div className={styles.inputDiv}>
+                    <label className={styles.inputLabel}>Password</label>
+                    <div className="input-container">
+                        <input
+                            type="password"
+                            className={styles.passwordField}
+                            placeholder="Password"
+                            onChange={handleSetPassword}
+                        />
+                    </div>
+                </div>
+
+                <button type="submit"
+                        className={styles.loginButton}
+                        value="Sign in"
+                        onClick={doLogin}
+                        >Sign In</button>
+                <p className={styles.loginMessage}></p>
+            </form>
+
         </div>
     );
-};
+
+}
+
 export default Login;

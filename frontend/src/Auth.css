@@ -102,6 +102,12 @@
   box-sizing: border-box;
 }
 
+.input:focus{
+  outline: none;
+  border-color: #3c3489;
+  box-shadow: 0 0 0 3px rgba(60, 52, 137, 0.1);
+}
+
 .errorMsg {
   font-family: Georgia, serif;
   font-size: 14px;

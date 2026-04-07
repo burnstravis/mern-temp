@@ -12,8 +12,6 @@ exports.setApp = function (app, client) {
     app.post('/api/register', async (req, res) => {
         const { firstName, lastName, email, username, password } = req.body;
 
-        console.log(req.body);
-
         if (!firstName || !lastName || !email || !username || !password) {
             return res.status(400).json({ error: 'All fields are required.' });
         }

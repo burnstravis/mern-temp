@@ -8,11 +8,21 @@ import { Navigate, Outlet } from 'react-router-dom';
 import ConversationPage from "./pages/ConversationPage.tsx";
 import MessagesPage from "./pages/MessagesPage.tsx";
 import HomePage from "./pages/HomePage.tsx";
+import Navbar from "./components/Navbar.tsx";
 
-const ProtectedRoute = () => { //keeps unlogged in users from viewing certain pages
+const ProtectedRoute = () => {
     const isLogged = localStorage.getItem('user_data');
 
-    return isLogged ? <Outlet /> : <Navigate to="/" replace />;
+    if (!isLogged) {
+        return <Navigate to="/" replace />;
+    }
+
+    return (
+        <div className="app-layout">
+            <Navbar />
+            <Outlet />
+        </div>
+    );
 };
 
 function App() {
