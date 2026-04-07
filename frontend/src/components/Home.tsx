@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import {retrieveToken, storeToken} from '../tokenStorage';
 import styles from '../pages/HomePage.module.css'
+import {useNavigate} from "react-router-dom";
 
 
 
 function Home() {
 
+    const navigate = useNavigate();
+
     const _ud = localStorage.getItem('user_data');
 
     if (!_ud) {
-        window.location.href = "/";
+        navigate('/');
     }
     const ud = _ud ? JSON.parse(_ud) : { id: -1 };
     const userId = ud._id || ud.id;

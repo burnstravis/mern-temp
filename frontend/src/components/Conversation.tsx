@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import {retrieveToken, storeToken} from '../tokenStorage';
 import styles from '../pages/ConversationsPage.module.css'
+import {useNavigate} from "react-router-dom";
 
 const fakeMessages = [
     {
         _id: "m1",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Yo random question",
         createdAt: "2026-04-02T21:50:00Z"
     },
@@ -21,7 +22,7 @@ const fakeMessages = [
     {
         _id: "m3",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Would you rather fight 1 horse-sized duck or 100 duck-sized horses",
         createdAt: "2026-04-02T21:53:30Z"
     },
@@ -35,7 +36,7 @@ const fakeMessages = [
     {
         _id: "m5",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Nah you're underestimating the swarm",
         createdAt: "2026-04-02T21:55:00Z"
     },
@@ -49,7 +50,7 @@ const fakeMessages = [
     {
         _id: "m7",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "You think you'd win against 100 of anything??",
         createdAt: "2026-04-02T21:56:30Z"
     },
@@ -63,7 +64,7 @@ const fakeMessages = [
     {
         _id: "m9",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "That horse-sized duck is terrifying though",
         createdAt: "2026-04-02T21:58:10Z"
     },
@@ -77,7 +78,7 @@ const fakeMessages = [
     {
         _id: "m11",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Exactly. At least with the small ones you have a chance",
         createdAt: "2026-04-02T22:00:15Z"
     },
@@ -91,7 +92,7 @@ const fakeMessages = [
     {
         _id: "m13",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Honestly that's the worst part",
         createdAt: "2026-04-02T22:02:20Z"
     },
@@ -105,7 +106,7 @@ const fakeMessages = [
     {
         _id: "m15",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Go ahead",
         createdAt: "2026-04-02T22:04:10Z"
     },
@@ -119,7 +120,7 @@ const fakeMessages = [
     {
         _id: "m17",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Seagulls and it's not even close",
         createdAt: "2026-04-02T22:05:45Z"
     },
@@ -133,7 +134,7 @@ const fakeMessages = [
     {
         _id: "m19",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "And steal your foodteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteam while trash talking you",
         createdAt: "2026-04-02T22:07:05Z"
     },
@@ -147,13 +148,14 @@ const fakeMessages = [
     {
         _id: "m21",
         conversationId: "conv_001",
-        senderId: "69cc1a6778e6bd166a893917",
+        senderId: "69d48e049063fbc48903272f",
         text: "Same honestly 😂",
         createdAt: "2026-04-02T22:08:30Z"
     }
 ];
 function Conversation() {
 
+    const navigate = useNavigate();
     const [conversations, setConversations] = React.useState(fakeMessages);
     const [message, setMessage] =  useState('');
 
@@ -161,7 +163,7 @@ function Conversation() {
     const _ud = localStorage.getItem('user_data');
 
     if (!_ud) {
-        window.location.href = "/";
+        navigate('/');
     }
     const ud = _ud ? JSON.parse(_ud) : { id: -1 };
     const userId = ud._id || ud.id;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import {retrieveToken, storeToken} from '../tokenStorage';
 import styles from '../pages/MessagesPage.module.css'
+import {useNavigate} from "react-router-dom";
 
 
 const fakeConversations = [
@@ -37,15 +38,19 @@ const fakeConversations = [
 
 function Messages() {
 
+    const navigate = useNavigate();
+
     const [conversations, setConversations] = React.useState(fakeConversations);
     const [loading, setLoading] = useState(true);
     const [searchText, setSearchText] = useState('');
+    const [message,setMessage] = useState('');
+
 
 
     const _ud = localStorage.getItem('user_data');
 
     if (!_ud) {
-        window.location.href = "/";
+        navigate('/');
     }
     const ud = _ud ? JSON.parse(_ud) : { id: -1 };
     const userId = ud._id || ud.id;
@@ -64,7 +69,7 @@ function Messages() {
 
     async function fetchConversation(){
         console.log("Pretend this opens the chat");
-
+        setLoading(true);
 
         try {
             const token = retrieveToken();
@@ -79,13 +84,13 @@ function Messages() {
             const res = await response.json();
 
             if (res.error && res.error.length > 0) {
-                setResults("API Error: " + res.error);
+                setMessage("API Error: " + res.error);
                 return;
             } else {
                 setConversations(res.conversations || []);
             }
         } catch (e) {
-            console.error("Failed to load conversations", e);
+            setMessage("Failed to load conversations" + e);
         } finally {
             setLoading(false);
         }
