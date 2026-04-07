@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { buildPath } from "./path.ts";
+import {useNavigate} from "react-router-dom";
 
 interface ForgotPasswordResponse {
   error: string;
@@ -9,6 +10,8 @@ const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+
+  const navigate = useNavigate();
 
   const validateForm = (): boolean => {
     if (!email) {
@@ -56,7 +59,7 @@ const ForgotPassword: React.FC = () => {
   };
 
   function goBack(): void {
-    window.location.href = '/login';
+    navigate('/login');
   }
 
   return (
