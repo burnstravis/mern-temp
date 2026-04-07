@@ -91,7 +91,7 @@ exports.setApp = function (app, client) {
                 { $set: { verified: true }, $unset: { verificationCode: '' } }
             );
 
-            res.status(200).json({ error: 'SUCCESSFULLY VERIFIED' });
+            res.status(200).json({ Success: 'SUCCESSFULLY VERIFIED' });
         } catch (e) {
             res.status(500).json({ error: e.toString() });
         }
@@ -126,7 +126,7 @@ exports.setApp = function (app, client) {
             });
             if (sendError) throw new Error(sendError.message);
 
-            res.status(200).json({ error: "SENT RECOVERY PASSWORD TO EMAIL"});
+            res.status(200).json({ Success: "SENT RECOVERY PASSWORD TO EMAIL"});
         }
         catch (e) {
             res.status(500).json({ error: e.toString() });
