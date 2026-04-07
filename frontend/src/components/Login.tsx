@@ -66,7 +66,7 @@ function Login()
     }
 
     function goToForgotPassword(): void {
-        navigate('forgotPassword');
+        navigate('/forgotPassword');
     }
     function handleSetLoginName( e: any ) : void
     {
