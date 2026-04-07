@@ -5,7 +5,7 @@ import 'package:friend_connector_mobile/services/constants.dart';
 
 class ApiService {
   // Use 10.0.2.2 if on Android Emulator, localhost if on Linux/Web
-  static const String baseUrl = localUrl;
+  static const String baseUrl = prodUrl;
 
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
