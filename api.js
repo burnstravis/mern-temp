@@ -8,10 +8,18 @@ const crypto = require('crypto');
 const mailer = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, 
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    }
+});
+
+mailer.verify((error) => {
+    if (error) {
+        console.error('Mailer config error:', error);
+    } else {
+        console.log('Mailer ready:', process.env.EMAIL_USER);
     }
 });
 
@@ -68,6 +76,7 @@ exports.setApp = function (app, client) {
 
             res.status(200).json({ error: '' });
         } catch (e) {
+            console.error('Register/sendMail error:', e);
             res.status(500).json({ error: e.toString() });
         }
     });
