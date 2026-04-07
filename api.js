@@ -50,15 +50,14 @@ exports.setApp = function (app, client) {
                 verified: false
             });
 
-            //COMMENTED OUT BECAUSE NO KEY
-            // const { error: sendError } = await resend.emails.send({
-            //     from: 'noreply@largeproject.nathanfoss.me',
-            //     to: email,
-            //     subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
-            //     text: `!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the app to complete your registration.
-            //     This email is a test if it is correct. TO BE REWRITTEN.`
-            // });
-            // if (sendError) throw new Error(sendError.message);
+            const { error: sendError } = await resend.emails.send({
+                from: 'noreply@largeproject.nathanfoss.me',
+                to: email,
+                subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
+                text: `!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the app to complete your registration.
+                This email is a test if it is correct. TO BE REWRITTEN.`
+            });
+            if (sendError) throw new Error(sendError.message);
 
             res.status(200).json({ error: '' });
         } catch (e) {
@@ -181,44 +180,25 @@ exports.setApp = function (app, client) {
         try {
             const user = await db.collection('users').findOne({ username: login });
 
-            //REAL VERSION, DONT HAVE VERIFICATION LOCALLY
-            // if (user && await bcrypt.compare(password, user.password)) {
-            //     if (!user.verified) {
-            //         ret = { error: 'ACCOUNT HAS NOT BEEN VERIFIED', accessToken: '' };
-            //     } else {
-            //         const fn = user.firstName;
-            //         const ln = user.lastName;
-            //
-            //         const tokenData = tokenHandler.createToken(fn, ln, user._id);
-            //
-            //         ret = {
-            //             id: user._id,
-            //             firstName: fn,
-            //             lastName: ln,
-            //             accessToken: tokenData.accessToken,
-            //             error: ''
-            //         };
-            //
-            //         res.status(200).json({ error: 'LOGIN SUCCESSFUL'})
-            //     }
-            // } else {
-
             if (user && await bcrypt.compare(password, user.password)) {
+                if (!user.verified) {
+                    ret = { error: 'ACCOUNT HAS NOT BEEN VERIFIED', accessToken: '' };
+                } else {
+                    const fn = user.firstName;
+                    const ln = user.lastName;
 
-                const fn = user.firstName;
-                const ln = user.lastName;
+                    const tokenData = tokenHandler.createToken(fn, ln, user._id);
 
-                const tokenData = tokenHandler.createToken(fn, ln, user._id);
+                    ret = {
+                        id: user._id,
+                        firstName: fn,
+                        lastName: ln,
+                        accessToken: tokenData.accessToken,
+                        error: ''
+                    };
 
-                ret = {
-                    id: user._id,
-                    firstName: fn,
-                    lastName: ln,
-                    accessToken: tokenData.accessToken,
-                    error: ''
-                };
-
-
+                    res.status(200).json({ error: 'LOGIN SUCCESSFUL'})
+                }
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };
             }
