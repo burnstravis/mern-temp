@@ -51,7 +51,7 @@ exports.setApp = function (app, client) {
             });
 
             const { error: sendError } = await resend.emails.send({
-                from: 'noreply@largeproject.nathanfoss.me',
+                from: 'onboarding@resend.dev',
                 to: email,
                 subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
                 text: `!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the app to complete your registration.
