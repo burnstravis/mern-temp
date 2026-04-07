@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/login_response.dart';
 import '../services/api_service.dart';
 import 'home_page.dart';
 
@@ -17,30 +18,35 @@ class _LoginScreenState extends State<LoginScreen> {
   void _doLogin() async {
     setState(() => _isLoading = true);
 
-    final result = await ApiService.login(
+    final Map<String, dynamic> rawJson = await ApiService.login(
         _userController.text.trim(),
         _passController.text.trim()
     );
 
+    final response = LoginResponse.fromJson(rawJson);
+
     if (!mounted) return;
 
-    if (result['error'] == "") {
+    // Check the error field from the model
+    if (response.error.isEmpty && response.accessToken.isNotEmpty) {
+
+      // TODO: Store response.accessToken in Secure Storage here!
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Welcome back, ${result['firstName']}!"),
+          content: Text("Welcome back, ${response.firstName}!"),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 1), // Keep it brief
+          duration: const Duration(seconds: 1),
         ),
       );
 
       Future.delayed(const Duration(milliseconds: 1200), () {
-        if (!mounted) return; // Safety check for asynchronous code
+        if (!mounted) return;
 
-        // 3. Move to the Dashboard
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(firstName: result['firstName']),
+            builder: (context) => HomePage(firstName: response.firstName),
           ),
               (route) => false,
         );
@@ -48,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['error']),
+          content: Text(response.error.isNotEmpty ? response.error : "Login Failed"),
           backgroundColor: Colors.red,
         ),
       );

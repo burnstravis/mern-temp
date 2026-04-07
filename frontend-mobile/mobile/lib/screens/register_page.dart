@@ -20,12 +20,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false;
 
-  // Porting your validateForm() logic
   bool _validateForm() {
     if (_firstNameController.text.isEmpty ||
         _lastNameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _userController.text.isEmpty ||
+        _birthdayController.text.isEmpty ||
         _passController.text.isEmpty) {
       _showError('All fields are required.');
       return false;
