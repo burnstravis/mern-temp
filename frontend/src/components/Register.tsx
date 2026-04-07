@@ -118,7 +118,6 @@ const Register: React.FC = () => {
       //   birthday: ''
       // });
 
-      setTimeout(() => { navigate('/login'); }, 1500);
     } catch {
       setError('Server error. Please try again later.');
     }
