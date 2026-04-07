@@ -91,6 +91,19 @@
 
 }
 
+.forgotPasswordButton{
+    height: 50px;
+    width: 60%;
+    border-radius: 50px;
+    background: #F0A500FF;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+
+}
+
 .loginButton:hover {
     background: rgba(240, 165, 0, 0.9);
     transition: background-color .5s;

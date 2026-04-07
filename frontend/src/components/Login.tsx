@@ -64,6 +64,10 @@ function Login()
         }
 
     };
+
+    function goToForgotPassword(): void {
+        window.location.href = '/forgotPassword';
+    }
     function handleSetLoginName( e: any ) : void
     {
         setLoginName( e.target.value );
@@ -109,6 +113,11 @@ function Login()
                         >Sign In</button>
                 <p className={styles.loginMessage}></p>
             </form>
+
+            <button
+                className={styles.forgotPasswordButton}
+                onClick={goToForgotPassword}
+            > Forgot Password?</button>
 
         </div>
     );
