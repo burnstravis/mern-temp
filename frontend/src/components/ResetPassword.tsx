@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { buildPath } from "./path.ts";
+import {useNavigate} from "react-router-dom";
 
 interface ResetPasswordForm {
   newPassword: string;
@@ -11,6 +12,8 @@ interface ResetPasswordResponse {
 }
 
 const ResetPassword: React.FC = () => {
+
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<ResetPasswordForm>({
     newPassword: '',
     confirmPassword: ''
@@ -25,7 +28,7 @@ const ResetPassword: React.FC = () => {
     const token = params.get('token');
 
     if (!token) {
-      window.location.href = '/login';
+      navigate('/login');
       return;
     }
 
@@ -91,7 +94,8 @@ const ResetPassword: React.FC = () => {
       setSuccess('Password reset! Redirecting...');
       setFormData({ newPassword: '', confirmPassword: '' });
 
-      setTimeout(() => { window.location.href = '/login'; }, 1500);
+
+      setTimeout(() => { navigate('/login'); }, 1500); //remove this when we reset-password api
 
     } catch {
       setError('Server error. Please try again later.');
@@ -99,7 +103,7 @@ const ResetPassword: React.FC = () => {
   };
 
   function goBack(): void {
-    window.location.href = '/login';
+    navigate('/login');
   }
 
   return (

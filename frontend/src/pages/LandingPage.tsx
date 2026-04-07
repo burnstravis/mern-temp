@@ -1,13 +1,17 @@
 // LandingPage.tsx
 import './LandingPage.css';
+import {useNavigate} from "react-router-dom";
 
 const LandingPage = () => {
+
+    const navigate = useNavigate();
+
     function goToLogin(): void {
-        window.location.href = '/login';
+        navigate('/login');
     }
 
     function goToRegister(): void {
-        window.location.href = '/register';
+        navigate('/register');
     }
 
     return (
