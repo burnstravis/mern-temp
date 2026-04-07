@@ -1,0 +1,227 @@
+.conversationWrapper {
+    min-height: 100vh;
+    background-color: #a89fd8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    border: 4px solid #7b6fc4;
+    box-sizing: border-box;
+}
+
+.conversationContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 560px;
+}
+
+.conversationTitle {
+    font-family: 'Brush Script MT', 'Dancing Script', cursive;
+    font-size: 64px;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+    text-align: center;
+    text-shadow: 1px 2px 6px rgba(0,0,0,0.15);
+}
+
+.conversationSubtitle {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: #f0edff;
+    margin: 0 0 16px 0;
+    text-align: center;
+}
+
+.conversationView {
+    background-color: #f0edff;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 800px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.conversationHeader {
+    background-color: var(--sent-bg);
+    border-radius: 20px;
+    width: 100%;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.messageReceiverName {
+    color: var(--text-sent);
+}
+
+.todaysPrompt {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--bg-send-button);
+    border-radius: 20px;
+}
+
+#promptMessage {
+    font-size: 16px;
+    font-style: italic;
+    font-weight: bold;
+    color: var(--text-received);
+    margin: 0;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+#promptHeader {
+    font-size: 16px;
+    color: var(--text-received);
+    font-style: italic;
+    font-weight: bold;
+}
+
+.messages{
+    flex: 1;
+    overflow-y: auto;
+}
+
+.conversationMessage{
+    justify-content: space-between;
+    display: flex;
+    background-color: rgba(240, 237, 255, 0);
+    border-radius: 20px;
+    padding: 24px 40px;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 8px;
+    align-items: center;
+
+}
+
+.conversationMessage.received {
+    flex-direction: row;
+}
+
+.conversationMessage.sent {
+    flex-direction: row-reverse;
+}
+
+
+#conversationText {
+    margin: 0;
+    font-family: Georgia, serif;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    max-width: 70%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+    padding: 8px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+}
+.sent #conversationText {
+    text-align: right;
+    color: var(--text-sent);
+    background:var(--sent-bg);
+    border-radius: 5px;
+}
+
+.received #conversationText {
+    text-align: left;
+    color: var(--text-received);
+    background: var(--recieved-bg);
+    border-radius: 5px;
+}
+
+.messageInputWrapper {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    background-color: var(--sent-bg);
+    max-width: 560px;
+    width: 100%;
+    height: 100px;
+    margin: 0;
+    box-sizing: border-box;
+    gap: 8px;
+    padding: 8px 8px;
+    border-radius: 20px;
+}
+
+#messageInputText {
+    display: flex;
+    background: #ffffff;
+    color: rgba(0, 0, 0, 0.7);
+    font-size: 16px;
+    font-style: normal;
+    min-height: 30px;
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+#messageInputButton {
+    background: var(--bg-send-button);
+    color: #000000;
+    font-style: italic;
+    font-weight: bold;
+    width: 15%;
+    height: 100%;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.conversationTimestamp{
+    font-family: Georgia, serif;
+    font-weight: lighter;
+    font-style: normal;
+    font-size: 12px;
+    color: #2e2a5e;
+    margin: 0;
+}
+
+.cardHeading {
+    font-family: Georgia, serif;
+    font-weight: bold;
+    font-style: italic;
+    font-size: 20px;
+    color: #2e2a5e;
+    margin: 0;
+}
+
+.cardSubtext {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 16px;
+    color: #4a4680;
+    margin: 0;
+}
+
+.messagesButton {
+    background-color: #f0a500;
+    color: #ffffff;
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 18px;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 56px;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.landingButton:hover {
+    background-color: #d49200;
+}

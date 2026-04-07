@@ -38,7 +38,6 @@ function CardUI() {
                 setMessage("API Error: " + res.error);
             } else {
                 setMessage('Card has been added');
-                // FIX: Match backend key 'accessToken'
                 if (res.accessToken) storeToken(res.accessToken);
             }
         } catch (error: any) {

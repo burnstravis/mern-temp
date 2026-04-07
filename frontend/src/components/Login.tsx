@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import { storeToken } from '../tokenStorage';
 import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
+import styles from '../pages/LoginPage.module.css';
 // @ts-ignore
-import md5 from '../../md5';
 function Login()
 {
+    const navigate = useNavigate();
     const [message,setMessage] = useState('');
-    const [loginName,setLoginName] = React.useState('');
-    const [loginPassword,setPassword] = React.useState('');
+    const [username,setLoginName] = React.useState('');
+    const [password,setPassword] = React.useState('');
     async function doLogin(event:any) : Promise<void>
     {
         event.preventDefault();
-        const hashedPassword = md5(loginPassword);
-        var obj = {login:loginName,password:hashedPassword};
+        var obj = {login:username,password:password};
         var js = JSON.stringify(obj);
         try
         {
@@ -23,45 +24,50 @@ function Login()
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            console.log('response', response);
-
             const res = await response.json();
-
-            const token = res.accessToken;
-
-            if (!token || typeof token !== 'string') {
-                setMessage("Error: No valid token received from server.");
+            if (!res.accessToken) {
+                if (res.error) {
+                    setMessage(res.error);
+                } else {
+                    setMessage("Login failed: No token received.");
+                }
                 return;
             }
 
+            const token = res.accessToken;
             storeToken(res);
-            const decoded: any = jwtDecode(token);
+
             try {
-                var ud = decoded;
-                var userId = ud.id;
-                var firstName = ud.firstName;
-                var lastName = ud.lastName;
+
+                const decoded: any = jwtDecode(token);
+                var userId = decoded.id;
+                var firstName = decoded.firstName;
+                var lastName = decoded.lastName;
 
                 if (!userId) {
                     setMessage('User/Password combination incorrect');
                 } else {
                     var user = { firstName: firstName, lastName: lastName, id: userId };
                     localStorage.setItem('user_data', JSON.stringify(user));
-                    setMessage('');
-
-                    window.location.href = '/login';
+                    setMessage('Welcome back!');
+                    navigate('/home');
                 }
             } catch (e) {
-                console.log(e);
+                console.error("JWT Decode Error:", e);
+                setMessage("Error processing login session.");
             }
         }
         catch(error:any)
         {
-            alert(error.toString());
+            setMessage("Server Connection Error.");
             return;
         }
 
     };
+
+    function goToForgotPassword(): void {
+        window.location.href = '/forgotPassword';
+    }
     function handleSetLoginName( e: any ) : void
     {
         setLoginName( e.target.value );
@@ -70,18 +76,52 @@ function Login()
     {
         setPassword( e.target.value );
     }
-    return(
-        <div id="loginDiv">
-            <span id="inner-title">PLEASE LOG IN</span><br />
-            Login: <input type="text" id="loginName" placeholder="Username"
-                          onChange={handleSetLoginName} /><br />
-            Password: <input type="password" id="loginPassword" placeholder="Password"
-                             onChange={handleSetPassword} />
-            <input type="submit" id="loginButton" className="buttons" value = "Do It"
-                   onClick={doLogin} />
-            <span id="loginResult">{message}</span><br />
-            <span>Don't have an account? <a href="/register">Register</a></span>
+    return (
+        <div className={styles.loginContainer}>
+            <h1 className={styles.loginTitle}>Login</h1>
+            <h2 className={styles.loginSubTitle}>Enter your details below</h2>
+
+            <form className={styles.loginForm}>
+                <div className={styles.inputDiv}>
+                    <label className={styles.inputLabel}>Username</label>
+                    <div className="input-container">
+                        <input
+                            type="text"
+                            className={styles.loginField}
+                            placeholder="Username"
+                            onChange={handleSetLoginName}
+                        />
+                    </div>
+                </div>
+
+                <div className={styles.inputDiv}>
+                    <label className={styles.inputLabel}>Password</label>
+                    <div className="input-container">
+                        <input
+                            type="password"
+                            className={styles.passwordField}
+                            placeholder="Password"
+                            onChange={handleSetPassword}
+                        />
+                    </div>
+                </div>
+
+                <button type="submit"
+                        className={styles.loginButton}
+                        value="Sign in"
+                        onClick={doLogin}
+                        >Sign In</button>
+                <p className={styles.loginMessage}></p>
+            </form>
+
+            <button
+                className={styles.forgotPasswordButton}
+                onClick={goToForgotPassword}
+            > Forgot Password?</button>
+
         </div>
     );
-};
+
+}
+
 export default Login;

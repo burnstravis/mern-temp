@@ -1,0 +1,32 @@
+.NavBar {
+    position: fixed;
+    justify-content: space-between;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    border-radius: 0 0 2px 2px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.NavBar button{
+    padding: .8rem .8rem;
+    color: var(--recieved-bg);
+    text-decoration: none;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: none;
+    background: transparent;
+    display: inline-block;
+    align-items: center;
+    text-shadow: 2px 2px 2px rgba(60, 52, 137, 0.2);
+    cursor: pointer;
+}
+
+.NavBar button:hover{
+    transform: scale(1.1);
+    transition: ease-in 0.1s
+}
