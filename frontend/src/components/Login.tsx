@@ -24,20 +24,24 @@ function Login()
             });
 
             const res = await response.json();
-            const token = res.accessToken;
-
-            if (!token || typeof token !== 'string') {
-                setMessage("Error: No valid token received from server.");
+            if (!res.accessToken) {
+                if (res.error) {
+                    setMessage(res.error);
+                } else {
+                    setMessage("Login failed: No token received.");
+                }
                 return;
             }
 
+            const token = res.accessToken;
             storeToken(res);
-            const decoded: any = jwtDecode(token);
+
             try {
-                var ud = decoded;
-                var userId = ud.id;
-                var firstName = ud.firstName;
-                var lastName = ud.lastName;
+
+                const decoded: any = jwtDecode(token);
+                var userId = decoded.id;
+                var firstName = decoded.firstName;
+                var lastName = decoded.lastName;
 
                 if (!userId) {
                     setMessage('User/Password combination incorrect');
@@ -48,12 +52,13 @@ function Login()
                     navigate('/home');
                 }
             } catch (e) {
-                console.log(e);
+                console.error("JWT Decode Error:", e);
+                setMessage("Error processing login session.");
             }
         }
         catch(error:any)
         {
-            alert(error.toString());
+            setMessage("Server Connection Error.");
             return;
         }
 
@@ -76,7 +81,6 @@ function Login()
             <input type="submit" id="loginButton" className="buttons" value = "Do It"
                    onClick={doLogin} />
             <span id="loginResult">{message}</span><br />
-            <span>Don't have an account? <a href="/register">Register</a></span>
         </div>
     );
 };
