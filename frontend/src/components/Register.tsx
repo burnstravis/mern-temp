@@ -16,9 +16,11 @@ interface RegisterResponse {
   error: string;
 }
 
-const navigate = useNavigate();
 
 const Register: React.FC = () => {
+
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState<RegisterForm>({
     firstName: '',
     lastName: '',
@@ -117,7 +119,6 @@ const Register: React.FC = () => {
       // });
 
       setTimeout(() => { navigate('/login'); }, 1500);
-
     } catch {
       setError('Server error. Please try again later.');
     }
