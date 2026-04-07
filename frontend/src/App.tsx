@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './App.css';
 import LoginPage from './pages/LoginPage.tsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import CardPage from './pages/CardPage.tsx';
 import RegisterPage from "./pages/RegisterPage.tsx";
 import LandingPage from "./pages/LandingPage.tsx";
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgotPassword" element={<ForgotPasswordPage />} />
             <Route element={<ProtectedRoute />}>
                 <Route path="/cards" element={<CardPage />} />
             </Route>
