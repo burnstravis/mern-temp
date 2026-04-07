@@ -175,6 +175,11 @@ exports.setApp = function (app, client) {
     {
         const { login, password } = req.body; 
 
+        if(!login || !password)
+        {
+            return res.status(400).json({ error: 'Login and password are required.' });
+        }
+
         const db = client.db('large_project');
         let ret;
         try {
@@ -196,8 +201,6 @@ exports.setApp = function (app, client) {
                         accessToken: tokenData.accessToken,
                         error: ''
                     };
-
-                    res.status(200).json({ error: 'LOGIN SUCCESSFUL'})
                 }
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };
