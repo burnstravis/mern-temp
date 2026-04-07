@@ -2,26 +2,10 @@ require('express');
 require('mongodb');
 const tokenHandler = require('./createJWT.js');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const crypto = require('crypto');
 
-const mailer = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-mailer.verify((error) => {
-    if (error) {
-        console.error('Mailer config error:', error);
-    } else {
-        console.log('Mailer ready:', process.env.EMAIL_USER);
-    }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.setApp = function (app, client) {
 
@@ -66,13 +50,14 @@ exports.setApp = function (app, client) {
                 verified: false
             });
 
-            await mailer.sendMail({
-                from: process.env.EMAIL_USER,
+            const { error: sendError } = await resend.emails.send({
+                from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
                 subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
                 text: `!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the app to complete your registration.
                 This email is a test if it is correct. TO BE REWRITTEN.`
             });
+            if (sendError) throw new Error(sendError.message);
 
             res.status(200).json({ error: '' });
         } catch (e) {
@@ -130,13 +115,14 @@ exports.setApp = function (app, client) {
                 res.status(400).json({ error: 'NOT VERIFIED'});
             }
 
-            await mailer.sendMail({
-                from: process.env.EMAIL_USER,
+            const { error: sendError } = await resend.emails.send({
+                from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
                 subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
                 text: `!\n\nYour password is: ${hashPassword}\n\nEnter this code on the app to complete your registration.
                 This email is a test if it is correct. TO BE REWRITTEN.`
             });
+            if (sendError) throw new Error(sendError.message);
 
             res.status(200).json({ error: "SENT RECOVERY PASSWORD TO EMAIL"});
         }
