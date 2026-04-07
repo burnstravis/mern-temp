@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import md5 from "../../md5.ts";
 import { buildPath } from "./path.ts";
 
 interface RegisterForm {
@@ -87,7 +86,7 @@ const Register: React.FC = () => {
           lastName: formData.lastName,
           email: formData.email,
           username: formData.username,
-          password: md5(formData.password),
+          password: formData.password,
           birthday: formData.birthday
         })
       });

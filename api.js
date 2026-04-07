@@ -1,5 +1,6 @@
 require('express');
 require('mongodb');
+const md5 = require('./md5.js');
 const tokenHandler = require('./createJWT.js'); //
 
 
@@ -46,6 +47,8 @@ exports.setApp = function (app, client) {
     app.post('/api/login', async (req, res, next) => {
         const { login, password, jwtToken } = req.body;
 
+        const hashPassword = md5(password);
+
         if (jwtToken) {
             try {
                 if (tokenHandler.isExpired(jwtToken)) {
@@ -62,7 +65,7 @@ exports.setApp = function (app, client) {
         try {
             const results = await db.collection('users').find({
                 username: login,
-                passwordHash: password
+                passwordHash: hashPassword
             }).toArray();
 
             if (results.length > 0) {
@@ -94,6 +97,8 @@ exports.setApp = function (app, client) {
     {
         const { firstName, lastName, email, username, password, birthday } = req.body;
 
+        const hashPassword = md5(password);
+
         const bdObject = new Date(birthday);
 
         const newUser = {
@@ -101,7 +106,7 @@ exports.setApp = function (app, client) {
             lastName: lastName,
             email: email,
             username: username,
-            passwordHash: password,
+            passwordHash: hashPassword,
             birthday: bdObject
         };
 

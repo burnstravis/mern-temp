@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import { buildPath } from './path';
 import { storeToken } from '../tokenStorage';
 import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
 // @ts-ignore
-import md5 from '../../md5';
 function Login()
 {
+    const navigate = useNavigate();
     const [message,setMessage] = useState('');
     const [username,setLoginName] = React.useState('');
     const [password,setPassword] = React.useState('');
     async function doLogin(event:any) : Promise<void>
     {
         event.preventDefault();
-        const hashedPassword = md5(password);
-        var obj = {login:username,password:hashedPassword};
+        var obj = {login:username,password:password};
         var js = JSON.stringify(obj);
         try
         {
@@ -45,8 +45,7 @@ function Login()
                     var user = { firstName: firstName, lastName: lastName, id: userId };
                     localStorage.setItem('user_data', JSON.stringify(user));
                     setMessage('');
-
-                    window.location.href = '/login';
+                    navigate('/home');
                 }
             } catch (e) {
                 console.log(e);
