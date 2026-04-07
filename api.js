@@ -115,6 +115,8 @@ exports.setApp = function (app, client) {
                 res.status(400).json({ error: 'NOT VERIFIED'});
             }
 
+            hashPassword = user.password;
+
             const { error: sendError } = await resend.emails.send({
                 from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
