@@ -4,7 +4,7 @@ import { storeToken } from '../tokenStorage';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import styles from '../pages/LoginPage.module.css';
-// @ts-ignore
+
 function Login()
 {
     const navigate = useNavigate();
@@ -14,8 +14,8 @@ function Login()
     async function doLogin(event:any) : Promise<void>
     {
         event.preventDefault();
-        var obj = {login:username,password:password};
-        var js = JSON.stringify(obj);
+        const obj = {login:username,password:password};
+        const js = JSON.stringify(obj);
         try
         {
             const response = await fetch(buildPath('api/login'), {
@@ -40,14 +40,14 @@ function Login()
             try {
 
                 const decoded: any = jwtDecode(token);
-                var userId = decoded.id;
-                var firstName = decoded.firstName;
-                var lastName = decoded.lastName;
+                const userId = decoded.id;
+                const firstName = decoded.firstName;
+                const lastName = decoded.lastName;
 
                 if (!userId) {
                     setMessage('User/Password combination incorrect');
                 } else {
-                    var user = { firstName: firstName, lastName: lastName, id: userId };
+                    const user = { firstName: firstName, lastName: lastName, id: userId };
                     localStorage.setItem('user_data', JSON.stringify(user));
                     setMessage('Welcome back!');
                     navigate('/home');
@@ -63,10 +63,10 @@ function Login()
             return;
         }
 
-    };
+    }
 
     function goToForgotPassword(): void {
-        window.location.href = '/forgotPassword';
+        navigate('forgotPassword');
     }
     function handleSetLoginName( e: any ) : void
     {
@@ -111,7 +111,7 @@ function Login()
                         value="Sign in"
                         onClick={doLogin}
                         >Sign In</button>
-                <p className={styles.loginMessage}></p>
+                <p className={styles.loginMessage}>{message}</p>
             </form>
 
             <button

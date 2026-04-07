@@ -171,9 +171,9 @@ exports.setApp = function (app, client) {
         res.status(200).json({ error: error, jwtToken: refreshedToken });
     });*/
 
-    app.post('/api/login', async (req, res, next) => 
+    app.post('/api/login', async (req, res, next) =>
     {
-        const { login, password } = req.body; 
+        const { login, password } = req.body;
 
         const db = client.db('large_project');
         let ret;
@@ -197,7 +197,6 @@ exports.setApp = function (app, client) {
                         error: ''
                     };
 
-                    res.status(200).json({ error: 'LOGIN SUCCESSFUL'})
                 }
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };

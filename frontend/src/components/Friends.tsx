@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { buildPath } from './path';
-import {retrieveToken, storeToken} from '../tokenStorage';
+import { useState } from 'react';
+//import { buildPath } from './path';
+//import { retrieveToken } from '../tokenStorage';
 import styles from '../pages/FriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
-import Messages from "./Messages.tsx";
 
 const fakeFriendsList = [
     {
@@ -67,9 +66,9 @@ const fakeFriendsList = [
 function Friends() {
 
     const navigate = useNavigate();
-    const [friends, setFriends] = React.useState(fakeFriendsList);
-    const [loading, setLoading] = useState(true);
-    const [message,setMessage] = useState('');
+    const [friends, setFriends] = useState(fakeFriendsList);
+    //const [loading, setLoading] = useState(true);
+    //const [message,setMessage] = useState('');
 
     const _ud = localStorage.getItem('user_data');
 
@@ -79,48 +78,48 @@ function Friends() {
     const ud = _ud ? JSON.parse(_ud) : { id: -1 };
     const userId = ud._id || ud.id;
 
-    async function fetchFriends() {
-        console.log("Pretend this fetches friends list from API");
-        setLoading(true);
-        try {
-            const token = retrieveToken();
-            const response = await fetch(buildPath('api/listFriends'), {
-                method: 'POST',
-                body: JSON.stringify({ userId: userId, jwtToken: token }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+    // async function fetchFriends() {
+    //     console.log("Pretend this fetches friends list from API");
+    //     setLoading(true);
+    //     try {
+    //         const token = retrieveToken();
+    //         const response = await fetch(buildPath('api/listFriends'), {
+    //             method: 'POST',
+    //             body: JSON.stringify({ userId: userId, jwtToken: token }),
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             }
+    //         });
+    //
+    //         const res = await response.json();
+    //
+    //         if (res.error && res.error.length > 0) {
+    //             setMessage("API Error: " + res.error);
+    //             return;
+    //         } else {
+    //             setFriends(res.friends || []);
+    //         }
+    //     } catch (e) {
+    //         setMessage("Failed to load friends" + e);
+    //         setFriends([]);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
 
-            const res = await response.json();
+    // async function loadFriends() {
+    //     console.log("Loading friends...");
+    //     try{
+    //         //API CALL FOR ALL FRIENDS
+    //         //SET FRIENDS TO RES.FRIENDS
+    //     } catch (e){
+    //         setMessage("failed to load friends..." + e);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
 
-            if (res.error && res.error.length > 0) {
-                setMessage("API Error: " + res.error);
-                return;
-            } else {
-                setFriends(res.friends || []);
-            }
-        } catch (e) {
-            setMessage("Failed to load friends" + e);
-            setFriends([]);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function loadFriends() {
-        console.log("Loading friends...");
-        try{
-            //API CALL FOR ALL FRIENDS
-            //SET FRIENDS TO RES.FRIENDS
-        } catch (e){
-            setMessage("failed to load friends..." + e);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    const loadFriendProfile = (friendshipId) => {
+    const loadFriendProfile = (friendshipId: string) => {
         const friendUserId = getFriendId(friendshipId);
         if (friendUserId) {
             console.log("Navigating to profile of:", friendUserId);
@@ -128,13 +127,13 @@ function Friends() {
         }
     };
 
-    const getFriendId = (friendshipId) => {
+    const getFriendId = (friendshipId: string) => {
         const friendship = friends.find(f => f._id === friendshipId);
         if (!friendship) return null;
         return friendship.requesterId === userId ? friendship.recipientId : friendship.requesterId;
     };
 
-    const handleAccept = async (friendshipId) => {
+    const handleAccept = async (friendshipId: string) => {
         console.log("Accepting request:", friendshipId);
         // Add API call here to update status to 'accepted'
         setFriends(prev => prev.map(f =>
@@ -142,11 +141,11 @@ function Friends() {
         ));
     };
 
-    const formatDateOfBirth = (date) => {
+    const formatDateOfBirth = (date: string) => {
         return date.replace(/-/g, "/");
     }
 
-    const handleReject = async (friendshipId) => {
+    const handleReject = async (friendshipId: string) => {
         console.log("Rejecting/Removing request:", friendshipId);
 
         // try {

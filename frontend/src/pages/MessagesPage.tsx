@@ -1,4 +1,4 @@
-// LandingPage.tsx
+// MessagesPage.tsx
 import styles from './MessagesPage.module.css';
 import Messages from "../components/Messages.tsx";
 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { buildPath } from './path';
-import {retrieveToken, storeToken} from '../tokenStorage';
+import {useEffect, useState} from 'react';
+//import { buildPath } from './path';
+//import { retrieveToken } from '../tokenStorage';
 import styles from '../pages/MessagesPage.module.css'
 import {useNavigate} from "react-router-dom";
 
@@ -40,20 +40,22 @@ function Messages() {
 
     const navigate = useNavigate();
 
-    const [conversations, setConversations] = React.useState(fakeConversations);
-    const [loading, setLoading] = useState(true);
+    const [conversations, setConversations] = useState(fakeConversations);
+    //const [loading, setLoading] = useState(true);
     const [searchText, setSearchText] = useState('');
-    const [message,setMessage] = useState('');
-
-
+    //const [message,setMessage] = useState('');
 
     const _ud = localStorage.getItem('user_data');
 
     if (!_ud) {
         navigate('/');
     }
-    const ud = _ud ? JSON.parse(_ud) : { id: -1 };
-    const userId = ud._id || ud.id;
+    useEffect(() => {
+        setConversations(fakeConversations);
+    })
+
+    // const ud = _ud ? JSON.parse(_ud) : { id: -1 };
+    // const userId = ud._id || ud.id;
 
     const formatTimeAgo = (dateString: string) => {
         const now = new Date();
@@ -67,36 +69,36 @@ function Messages() {
         return `${Math.floor(diffInSeconds / 604800)}w`;
     };
 
-    async function fetchConversation(){
-        console.log("Pretend this opens the chat");
-        setLoading(true);
+    // async function fetchConversation(){
+    //     console.log("Pretend this opens the chat");
+    //     setLoading(true);
+    //
+    //     try {
+    //         const token = retrieveToken();
+    //         const response = await fetch(buildPath('api/listConversations'), {
+    //             method: 'POST',
+    //             body: JSON.stringify({ userId: userId, jwtToken: token }),
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             }
+    //         });
+    //
+    //         const res = await response.json();
+    //
+    //         if (res.error && res.error.length > 0) {
+    //             setMessage("API Error: " + res.error);
+    //             return;
+    //         } else {
+    //             setConversations(res.conversations || []);
+    //         }
+    //     } catch (e) {
+    //         setMessage("Failed to load conversations" + e);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
 
-        try {
-            const token = retrieveToken();
-            const response = await fetch(buildPath('api/listConversations'), {
-                method: 'POST',
-                body: JSON.stringify({ userId: userId }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const res = await response.json();
-
-            if (res.error && res.error.length > 0) {
-                setMessage("API Error: " + res.error);
-                return;
-            } else {
-                setConversations(res.conversations || []);
-            }
-        } catch (e) {
-            setMessage("Failed to load conversations" + e);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function loadConversation(conversationId){
+    async function loadConversation(_conversationId: string){
 
         console.log("Loading conversation...");
 
