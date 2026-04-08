@@ -50,6 +50,30 @@
   gap: 14px;
 }
 
+.Notifcard {
+  background-color: #a89fd8;
+  border-radius: 20px;
+  padding: 28px 36px 32px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.Modalcard {
+  background-color: #a89fd8;
+  border-radius: 20px;
+  padding: 28px 36px 32px;
+  width: 50%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
 .cardHeading {
   font-family: Georgia, serif;
   font-weight: bold;
