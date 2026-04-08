@@ -38,7 +38,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgotPassword" element={<ForgotPasswordPage />} />
             <Route path="/resetPassword" element={<ResetPasswordPage />} />
-            <Route path="/notification" element={<NotificationPage />} />
+            <Route path="/notifications" element={<NotificationPage />} />
             <Route element={<ProtectedRoute />}>
                 <Route path="/cards" element={<CardPage />} />
                 <Route path="/conversation" element={<ConversationPage />} />
