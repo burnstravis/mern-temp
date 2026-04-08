@@ -100,34 +100,37 @@ exports.setApp = function (app, client) {
 
     app.post('/api/email-recovery', async (req, res) => {
 
-        const{email} = req.body; 
-        const verificationCode = crypto.randomInt(10000, 99999).toString()
+        const { email } = req.body;
+        const verificationCode = crypto.randomInt(10000, 99999).toString();
 
-        if(!email){
-            return res.status(400).json({ error: 'Email is required.'});
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required.' });
         }
 
         try {
             const db = client.db('large_project');
 
-            const user = await db.collection('users').findOne({email: email, verified: true});
+            const user = await db.collection('users').findOne({ email: email, verified: true });
 
-            if(!user.verified){
-                res.status(400).json({ error: 'NOT VERIFIED'});
+            if (!user) {
+                return res.status(400).json({ error: 'No verified account found for this email.' });
             }
 
-            user.verificationCode = verificationCode;
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { verificationCode: verificationCode } }
+            );
 
             const { error: sendError } = await resend.emails.send({
                 from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
                 subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
-                text: `!\n\nYour password is: ${hashPassword}\n\nEnter this code on the app to complete your registration.
+                text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.
                 This email is a test if it is correct. TO BE REWRITTEN.`
             });
             if (sendError) throw new Error(sendError.message);
 
-            res.status(200).json({ Success: "SENT RECOVERY PASSWORD TO EMAIL"});
+            res.status(200).json({ success: "SENT RECOVERY CODE TO EMAIL" });
         }
         catch (e) {
             res.status(500).json({ error: e.toString() });
@@ -135,6 +138,49 @@ exports.setApp = function (app, client) {
     });
 
 
+    app.post('/api/reset-password', async (req, res, next) =>
+    {
+        const { username, verificationCode, password, confirmpassword } = req.body;
+
+        if (!username) {
+            return res.status(400).json({ error: 'Username required.' });
+        }
+        if (!verificationCode) {
+            return res.status(400).json({ error: 'Verification code is required.' });
+        }
+        if (!password || !confirmpassword) {
+            return res.status(400).json({ error: 'Password and confirmation are required.' });
+        }
+        if (password !== confirmpassword) {
+            return res.status(400).json({ error: 'Passwords do not match.' });
+        }
+
+        try {
+            const db = client.db('large_project');
+
+            const user = await db.collection('users').findOne({ username: username, verified: true });
+
+            if (!user) {
+                return res.status(400).json({ error: 'No verified account found for this username.' });
+            }
+
+            if (user.verificationCode !== verificationCode) {
+                return res.status(400).json({ error: 'Verification code is incorrect.' });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            await db.collection('users').updateOne(
+                { username: username },
+                { $set: { password: hashedPassword }, $unset: { verificationCode: '' } }
+            );
+
+            res.status(200).json({ success: "Password reset successful. Please login with the new password." });
+        }
+        catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
 
     app.post('/api/login', async (req, res, next) => 
     {
