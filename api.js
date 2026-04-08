@@ -4,15 +4,14 @@ const tokenHandler = require('./createJWT.js');
 const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
 const crypto = require('crypto');
-
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.setApp = function (app, client) {
 
     app.post('/api/register', async (req, res) => {
-        const { firstName, lastName, email, username, password } = req.body;
+        const { firstName, lastName, email, username, password, birthday} = req.body;
 
-        if (!firstName || !lastName || !email || !username || !password) {
+        if (!firstName || !lastName || !email || !username || !password || !birthday) {
             return res.status(400).json({ error: 'All fields are required.' });
         }
 
@@ -45,6 +44,7 @@ exports.setApp = function (app, client) {
                 lastName: lastName,
                 email: email,
                 username: username,
+                birthday: birthday,
                 password: hashedPassword,
                 verificationCode: verificationCode,
                 verified: false
@@ -101,6 +101,7 @@ exports.setApp = function (app, client) {
     app.post('/api/email-recovery', async (req, res) => {
 
         const{email} = req.body; 
+        const verificationCode = crypto.randomInt(10000, 99999).toString()
 
         if(!email){
             return res.status(400).json({ error: 'Email is required.'});
@@ -115,7 +116,7 @@ exports.setApp = function (app, client) {
                 res.status(400).json({ error: 'NOT VERIFIED'});
             }
 
-            hashPassword = user.password;
+            user.verificationCode = verificationCode;
 
             const { error: sendError } = await resend.emails.send({
                 from: 'noreply@largeproject.nathanfoss.me',
@@ -133,43 +134,7 @@ exports.setApp = function (app, client) {
         }
     });
 
-    // Add friends API soon
-    /*app.post('/api/addcard', async (req, res, next) =>
-    {
-        const { userId, card, jwtToken } = req.body;
 
-        if (!jwtToken) {
-            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
-        }
-
-        try {
-            if (tokenHandler.isExpired(jwtToken)) {
-                return res.status(200).json({ error: 'The JWT is no longer valid', jwtToken: '' });
-            }
-        } catch (e) {
-            console.log(e.message);
-        }
-
-        const newCard = { Card: card, UserId: userId };
-        var error = '';
-
-        try {
-            const db = client.db('COP4331Cards');
-            await db.collection('Cards').insertOne(newCard);
-        } catch (e) {
-            error = e.toString();
-        }
-
-        var refreshedToken = null;
-        try {
-            const refreshed = tokenHandler.refresh(jwtToken);
-            refreshedToken = refreshed.accessToken;
-        } catch (e) {
-            console.log(e.message);
-        }
-
-        res.status(200).json({ error: error, jwtToken: refreshedToken });
-    });*/
 
     app.post('/api/login', async (req, res, next) => 
     {
@@ -212,6 +177,12 @@ exports.setApp = function (app, client) {
     });
 
 
+
+
+    //app.post('api/friends-list')
+
+
+
     // Search Friends API soon
     /*app.post('/api/searchcards', async (req, res, next) =>
     app.post('/api/register', async (req, res, next) =>
@@ -243,38 +214,9 @@ exports.setApp = function (app, client) {
         }
 
         res.status(200).json({ error: error });
-    });
-
-
-
-    app.post('/api/searchcards', async (req, res, next) =>
-    {
-        var error = '';
-        const { userId, search, jwtToken } = req.body;
-
-        try {
-            if (tokenHandler.isExpired(jwtToken)) {
-                return res.status(200).json({ error: 'The JWT is no longer valid', jwtToken: '' });
-            }
-        } catch (e) {
-            console.log(e.message);
-        }
-
-        var _search = search.trim();
-        const db = client.db('COP4331Cards');
-        const results = await db.collection('Cards').find({"Card":{$regex:_search+'.*',
-                $options:'i'}}).toArray();
-
-        var _ret = results.map(item => item.Card);
-
-        var refreshedToken = null;
-        try {
-            const refreshed = tokenHandler.refresh(jwtToken);
-            refreshedToken = refreshed.accessToken;
-        } catch (e) {
-            console.log(e.message);
-        }
-
-        res.status(200).json({ results: _ret, error: error, jwtToken: refreshedToken });
     });*/
+
+
+
+
 }
