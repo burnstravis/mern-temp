@@ -312,7 +312,7 @@ exports.setApp = function (app, client) {
                 return res.status(200).json(ret);
             }
 
-            const existing = await db.collection('friendship').findOne({
+            const existing = await db.collection('friendships').findOne({
                 $or: [
                     { requesterid: requesterObjectId, recepientid: recipientObjectId },
                     { requesterid: recipientObjectId, recepientid: requesterObjectId }
@@ -325,7 +325,7 @@ exports.setApp = function (app, client) {
                 return res.status(200).json(ret);
             }
 
-            await db.collection('friendship').insertOne({
+            await db.collection('friendships').insertOne({
                 requesterid: requesterObjectId,
                 recepientid: recipientObjectId,
                 status: 'pending'
