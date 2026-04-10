@@ -116,6 +116,24 @@ const ResetPassword: React.FC = () => {
       </p>
 
       <div className="fieldGroup">
+        <label className="label">Account Email</label>
+        <input
+            type="text"
+            name="email"
+            className="input"
+            placeholder="Account email"
+            value={formData.email}
+            onChange={handleChange}
+        />
+        <label className="label">Verification Code</label>
+        <input
+            type="text"
+            name="verificationCode"
+            className="input"
+            placeholder="Verification Code From Email"
+            value={formData.verificationCode}
+            onChange={handleChange}
+        />
         <label className="label">New Password</label>
         <input
           type="password"
