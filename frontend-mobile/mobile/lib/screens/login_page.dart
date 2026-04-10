@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:friend_connector_mobile/screens/forgotpassword_page.dart';
 import '../models/login_response.dart';
 import '../services/api_service.dart';
 import 'home_page.dart';
@@ -61,6 +62,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = false);
+  }
+
+  void _doForgotPassword() {
+
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ForgotPasswordPage(),
+        ),
+            (route) => false,
+      );
+    });
+
   }
 
   @override
@@ -171,6 +188,41 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                               : const Text(
                             "Sign In",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
+
+                      const SizedBox(height: 32),
+
+                      // Orange Forgot Password Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _doForgotPassword,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF0A500),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                              : const Text(
+                            "Forgot Password?",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,

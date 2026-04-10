@@ -66,4 +66,58 @@ class ApiService {
       return {'error': 'Connection failed: $e'};
     }
   }
+
+  static Future<Map<String, dynamic>> resetPassword(
+      String email,
+      String verificationCode,
+      String newPassword,
+      String confirmpassword
+      ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'verificationCode': verificationCode,
+          'password': newPassword,
+          'confirmpassword': confirmpassword
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+
+        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
+        return {'error': errorResponse['error'] ?? 'Reset Password failed'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> emailRecovery(
+      String email
+      ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/email-recovery'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+
+        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
+        return {'error': errorResponse['error'] ?? 'Email Recovery failed'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
 }
