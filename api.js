@@ -182,7 +182,7 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.post('/api/login', async (req, res, next) =>
+    app.post('/api/login', async (req, res) =>
     {
         const { login, password } = req.body;
 
@@ -269,10 +269,80 @@ exports.setApp = function (app, client) {
         }
     });
 
+    app.post('/api/add-friend', async (req, res,) =>
+    {
+        const { username, jwtToken } = req.body;
 
+        if (!username || !jwtToken) {
+            return res.status(400).json({ error: 'Username and token are required.', accessToken: '' });
+        }
 
+        const db = client.db('large_project');
+        let ret;
 
+        try {
+            if (tokenHandler.isExpired(jwtToken)) {
+                ret = { error: 'The JWT is no longer valid', accessToken: '' };
+                return res.status(200).json(ret);
+            }
 
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const requesterId = decoded?.id;
 
+            if (!requesterId) {
+                ret = { error: 'Invalid token payload.', accessToken: '' };
+                return res.status(200).json(ret);
+            }
+
+            const recipient = await db.collection('users').findOne({
+                username: username,
+                verified: true
+            });
+
+            if (!recipient) {
+                ret = { error: 'User not found.', accessToken: '' };
+                return res.status(200).json(ret);
+            }
+
+            const requesterObjectId = new ObjectId(requesterId);
+            const recipientObjectId = recipient._id;
+
+            if (requesterObjectId.toString() === recipientObjectId.toString()) {
+                ret = { error: 'You cannot add yourself.', accessToken: '' };
+                return res.status(200).json(ret);
+            }
+
+            const existing = await db.collection('friendship').findOne({
+                $or: [
+                    { requesterid: requesterObjectId, recepientid: recipientObjectId },
+                    { requesterid: recipientObjectId, recepientid: requesterObjectId }
+                ],
+                status: { $in: ['pending', 'accepted'] }
+            });
+
+            if (existing) {
+                ret = { error: 'Friend already exists.', accessToken: '' };
+                return res.status(200).json(ret);
+            }
+
+            await db.collection('friendship').insertOne({
+                requesterid: requesterObjectId,
+                recepientid: recipientObjectId,
+                status: 'pending'
+            });
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            ret = {
+                error: '',
+                accessToken: refreshed.accessToken
+            };
+        }
+        catch (e) {
+            ret = { error: e.toString(), accessToken: '' };
+        }
+
+        return res.status(200).json(ret);
+    });
 
 }
