@@ -1,5 +1,5 @@
 require('express');
-require('mongodb');
+const { ObjectId } = require('mongodb');
 const tokenHandler = require('./createJWT.js');
 const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
@@ -140,9 +140,9 @@ exports.setApp = function (app, client) {
 
     app.post('/api/reset-password', async (req, res, next) =>
     {
-        const { username, verificationCode, password, confirmpassword } = req.body;
+        const { email, verificationCode, password, confirmpassword } = req.body;
 
-        if (!username) {
+        if (!email) {
             return res.status(400).json({ error: 'Username required.' });
         }
         if (!verificationCode) {
@@ -158,10 +158,10 @@ exports.setApp = function (app, client) {
         try {
             const db = client.db('large_project');
 
-            const user = await db.collection('users').findOne({ username: username, verified: true });
+            const user = await db.collection('users').findOne({ email: email, verified: true });
 
             if (!user) {
-                return res.status(400).json({ error: 'No verified account found for this username.' });
+                return res.status(400).json({ error: 'No verified account found for this email.' });
             }
 
             if (user.verificationCode !== verificationCode) {
@@ -171,7 +171,7 @@ exports.setApp = function (app, client) {
             const hashedPassword = await bcrypt.hash(password, 10);
 
             await db.collection('users').updateOne(
-                { username: username },
+                { email: email },
                 { $set: { password: hashedPassword }, $unset: { verificationCode: '' } }
             );
 
@@ -225,42 +225,51 @@ exports.setApp = function (app, client) {
 
 
 
-    //app.post('api/friends-list')
+    app.post('/api/friends-list', async (req, res) => {
+        const { userId, page = 1, limit = 10 } = req.body;
 
-
-
-    // Search Friends API soon
-    /*app.post('/api/searchcards', async (req, res, next) =>
-    app.post('/api/register', async (req, res, next) =>
-    {
-        const { firstName, lastName, email, username, password } = req.body;
-
-        const newUser = {
-            FirstName: firstName,
-            LastName: lastName,
-            Email: email,
-            Username: username,
-            Password: password
-        };
-
-        var error = '';
-
-        try {
-            const db = client.db('COP4331Cards');
-
-            const existingUser = await db.collection('Users').findOne({ Login: username });
-            if(existingUser){
-                return res.status(200).json({ error: 'Username already taken' });
-            }
-
-            await db.collection('Users').insertOne(newUser);
-        } catch (e) {
-            error = e.toString();
-            return res.status(200).json({ error: error });
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required.' });
         }
 
-        res.status(200).json({ error: error });
-    });*/
+        try {
+            const db = client.db('large_project');
+
+            const skip = (page - 1) * limit;
+            const requesterId = new ObjectId(userId);
+
+            const [friendships, total] = await Promise.all([
+                db.collection('friendship')
+                    .find({ requesterId: requesterId })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray(),
+                db.collection('friendship')
+                    .countDocuments({ requesterId: requesterId })
+            ]);
+
+            const recipientIds = friendships.map(f => f.recipientId);
+
+            const friends = await db.collection('user')
+                .find(
+                    { _id: { $in: recipientIds } },
+                    { projection: { firstName: 1, lastName: 1, birthday: 1 } }
+                )
+                .toArray();
+
+            res.status(200).json({
+                friends,
+                page,
+                totalPages: Math.ceil(total / limit),
+                total
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
+
+
+
 
 
 
