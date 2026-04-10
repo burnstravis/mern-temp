@@ -335,6 +335,7 @@ exports.setApp = function (app, client) {
 
             ret = {
                 error: '',
+                message: 'Friend request sent successfully.',
                 accessToken: refreshed.accessToken
             };
         }
