@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import md5 from "../../md5.ts";
 import { buildPath } from "./path.ts";
+import {useNavigate} from "react-router-dom";
 
 interface RegisterForm {
   firstName: string;
@@ -8,6 +8,7 @@ interface RegisterForm {
   email: string;
   username: string;
   password: string;
+  birthday: string;
   confirmPassword: string;
 }
 
@@ -15,15 +16,23 @@ interface RegisterResponse {
   error: string;
 }
 
+
 const Register: React.FC = () => {
+
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState<RegisterForm>({
     firstName: '',
     lastName: '',
     email: '',
     username: '',
     password: '',
+    birthday: '',
     confirmPassword: ''
   });
+
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [verificationCode, setVerificationCode] = useState<string>('');
 
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
@@ -59,6 +68,13 @@ const Register: React.FC = () => {
       return false;
     }
 
+    if(formData.birthday) {
+      const birthDay = new Date(formData.birthday);
+      if(isNaN(birthDay.getTime())) {
+        setError('Please enter a valid date.');
+      }
+    }
+
     return true;
   };
 
@@ -78,7 +94,8 @@ const Register: React.FC = () => {
           lastName: formData.lastName,
           email: formData.email,
           username: formData.username,
-          password: md5(formData.password)
+          password: formData.password,
+          birthday: formData.birthday
         })
       });
 
@@ -89,114 +106,136 @@ const Register: React.FC = () => {
         return;
       }
 
-      setSuccess('Account created! Redirecting...');
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        username: '',
-        password: '',
-        confirmPassword: ''
-      });
-
-      setTimeout(() => { window.location.href = '/login'; }, 1500);
+      setIsVerifying(true);
+      setSuccess('Registration successfully. Please check your email for a code.');
+      // setFormData({
+      //   firstName: '',
+      //   lastName: '',
+      //   email: '',
+      //   username: '',
+      //   password: '',
+      //   confirmPassword: '',
+      //   birthday: ''
+      // });
 
     } catch {
       setError('Server error. Please try again later.');
     }
   };
 
+  const handleVerify = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(buildPath('api/verify-email'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          code: verificationCode
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Verification failed.');
+        return;
+      }
+
+      setSuccess('Email verified! Redirecting to login...');
+      setTimeout(() => { navigate('/login'); }, 2000);
+    } catch {
+      setError('Server error during verification.');
+    }
+  };
+
   function goBack(): void {
-    window.location.href = '/';
+    if (isVerifying) {
+      setIsVerifying(false); // Let them go back to the form if they made a mistake
+    } else {
+      navigate('/');
+    }
   }
 
   return (
     <div id="registerCard" className="card">
-      <p id="registerHeading" className="cardHeading">Create an account</p>
+
+      <p id="registerHeading" className="cardHeading">
+        {isVerifying ? "Verify Email" : "Create an account"}
+      </p>
       <p id="registerSubtext" className="cardSubtext">
-        Join and start connecting with friends
+        {isVerifying ? `Enter the code sent to ${formData.email}` : "Join and start connecting with friends"}
       </p>
 
-      <div id="registerNameRow" className="fieldRow">
-        <div className="fieldGroup">
-          <label className="label">First Name</label>
-          <input
-            type="text"
-            name="firstName"
-            className="input"
-            placeholder="First name"
-            value={formData.firstName}
-            onChange={handleChange}
-          />
-        </div>
+      {!isVerifying ? (
+          <>
+            <div id="registerNameRow" className="fieldRow">
+              <div className="fieldGroup">
+                <label className="label">First Name</label>
+                <input type="text" name="firstName" className="input" placeholder="First name" value={formData.firstName} onChange={handleChange} />
+              </div>
+              <div className="fieldGroup">
+                <label className="label">Last Name</label>
+                <input type="text" name="lastName" className="input" placeholder="Last name" value={formData.lastName} onChange={handleChange} />
+              </div>
+            </div>
 
-        <div className="fieldGroup">
-          <label className="label">Last Name</label>
-          <input
-            type="text"
-            name="lastName"
-            className="input"
-            placeholder="Last name"
-            value={formData.lastName}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
+            <div className="fieldGroup">
+              <label className="label">Email</label>
+              <input type="email" name="email" className="input" placeholder="Enter your email" value={formData.email} onChange={handleChange} />
+            </div>
 
-      <div className="fieldGroup">
-        <label className="label">Email</label>
-        <input
-          type="email"
-          name="email"
-          className="input"
-          placeholder="Enter your email"
-          value={formData.email}
-          onChange={handleChange}
-        />
-      </div>
+            <div className="fieldGroup">
+              <label className="label">Username</label>
+              <input type="text" name="username" className="input" placeholder="Choose a username" value={formData.username} onChange={handleChange} />
+            </div>
 
-      <div className="fieldGroup">
-        <label className="label">Username</label>
-        <input
-          type="text"
-          name="username"
-          className="input"
-          placeholder="Choose a username"
-          value={formData.username}
-          onChange={handleChange}
-        />
-      </div>
+            <div className="fieldGroup">
+              <label className="label">Birthday</label>
+              <input type="text" name="birthday" className="input" placeholder="XX-XX-XXXX" value={formData.birthday} onChange={handleChange} />
+            </div>
 
-      <div className="fieldGroup">
-        <label className="label">Password</label>
-        <input
-          type="password"
-          name="password"
-          className="input"
-          placeholder="Choose a password"
-          value={formData.password}
-          onChange={handleChange}
-        />
-      </div>
+            <div className="fieldGroup">
+              <label className="label">Password</label>
+              <input type="password" name="password" className="input" placeholder="Choose a password" value={formData.password} onChange={handleChange} />
+            </div>
 
-      <div className="fieldGroup">
-        <label className="label">Confirm Password</label>
-        <input
-          type="password"
-          name="confirmPassword"
-          className="input"
-          placeholder="Re-enter your password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-        />
-      </div>
+            <div className="fieldGroup">
+              <label className="label">Confirm Password</label>
+              <input type="password" name="confirmPassword" className="input" placeholder="Re-enter your password" value={formData.confirmPassword} onChange={handleChange} />
+            </div>
 
-      {error && <p className="errorMsg" style={{ color: 'red' }}>{error}</p>}
-      {success && <p className="errorMsg" style={{ color: 'green' }}>{success}</p>}
+            {error && <p className="errorMsg" style={{ color: 'red' }}>{error}</p>}
+            {success && <p className="errorMsg" style={{ color: 'green' }}>{success}</p>}
 
-      <button type="button" className="button" onClick={handleSubmit}>
-        Register
-      </button>
+            <button type="button" className="button" onClick={handleSubmit}>
+              Register
+            </button>
+          </>
+      ) : (
+          <>
+            <div className="fieldGroup">
+              <label className="label">Verification Code</label>
+              <input
+                  type="text"
+                  className="input"
+                  placeholder="5-digit code"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+              />
+            </div>
+
+            {error && <p className="errorMsg" style={{ color: 'red' }}>{error}</p>}
+            {success && <p className="errorMsg" style={{ color: 'green' }}>{success}</p>}
+
+            <button type="button" className="button" onClick={handleVerify}>
+              Verify Account
+            </button>
+          </>
+      )}
 
       <button type="button" className="backButton" onClick={goBack}>
         ← Back

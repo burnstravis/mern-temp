@@ -182,9 +182,9 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.post('/api/login', async (req, res, next) => 
+    app.post('/api/login', async (req, res, next) =>
     {
-        const { login, password } = req.body; 
+        const { login, password } = req.body;
 
         if(!login || !password)
         {
@@ -212,6 +212,7 @@ exports.setApp = function (app, client) {
                         accessToken: tokenData.accessToken,
                         error: ''
                     };
+
                 }
             } else {
                 ret = { error: "Login/Password incorrect", accessToken: '' };

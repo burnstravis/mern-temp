@@ -22,4 +22,4 @@ jobs:
             npm install
             npm run build
             cd ..
-            pm2 restart mern-app
+            pm2 start server.js --name "mern-app" || pm2 restart "mern-app"

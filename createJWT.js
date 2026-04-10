@@ -30,14 +30,16 @@ exports.isExpired = function (token) {
 
 exports.refresh = function (token) {
     try {
-        const ud = jwt.decode(token, { complete: true });
+        const ud = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, {
+            ignoreExpiration: true
+        });
 
-        const userId = ud.payload.id;
-        const firstName = ud.payload.firstName;
-        const lastName = ud.payload.lastName;
+        const userId = ud.id;
+        const firstName = ud.firstName;
+        const lastName = ud.lastName;
 
         return _createToken(firstName, lastName, userId);
     } catch (e) {
-        return { error: e.message };
+        return { error: "Invalid token signature" };
     }
 };
