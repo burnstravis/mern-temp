@@ -11,4 +11,4 @@ build/** linguist-generated
 CMakeLists.txt linguist-generated
 *.cmake linguist-generated
 *.vcxproj* linguist-generated
-*.sln linguist-generateded
+*.sln linguist-generated

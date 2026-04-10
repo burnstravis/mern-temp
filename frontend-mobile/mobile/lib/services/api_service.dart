@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
-import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:friend_connector_mobile/services/constants.dart';
 
@@ -139,6 +137,38 @@ class ApiService {
 
         final Map<String, dynamic> errorResponse = jsonDecode(response.body);
         return {'error': errorResponse['error'] ?? 'Email Recovery failed'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> friendsList(
+      String userId,
+      int page,
+      int limit,
+      ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/friends-list'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'page': page,
+          'limit': limit,
+        }),
+      );
+
+      final dynamic decodedData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return decodedData;
+      } else {
+        return {
+          'error': (decodedData is Map)
+              ? decodedData['error']
+              : 'Failed to load friends list'
+        };
       }
     } catch (e) {
       return {'error': 'Connection failed: $e'};
