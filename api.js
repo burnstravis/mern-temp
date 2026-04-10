@@ -1,18 +1,17 @@
 require('express');
-require('mongodb');
+const { ObjectId } = require('mongodb');
 const tokenHandler = require('./createJWT.js');
 const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
 const crypto = require('crypto');
-
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.setApp = function (app, client) {
 
     app.post('/api/register', async (req, res) => {
-        const { firstName, lastName, email, username, password } = req.body;
+        const { firstName, lastName, email, username, password, birthday} = req.body;
 
-        if (!firstName || !lastName || !email || !username || !password) {
+        if (!firstName || !lastName || !email || !username || !password || !birthday) {
             return res.status(400).json({ error: 'All fields are required.' });
         }
 
@@ -45,6 +44,7 @@ exports.setApp = function (app, client) {
                 lastName: lastName,
                 email: email,
                 username: username,
+                birthday: birthday,
                 password: hashedPassword,
                 verificationCode: verificationCode,
                 verified: false
@@ -100,80 +100,96 @@ exports.setApp = function (app, client) {
 
     app.post('/api/email-recovery', async (req, res) => {
 
-        const{email} = req.body; 
+        const { email } = req.body;
+        const verificationCode = crypto.randomInt(10000, 99999).toString();
 
-        if(!email){
-            return res.status(400).json({ error: 'Email is required.'});
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required.' });
         }
 
         try {
             const db = client.db('large_project');
 
-            const user = await db.collection('users').findOne({email: email, verified: true});
+            const user = await db.collection('users').findOne({ email: email, verified: true });
 
-            if(!user.verified){
-                res.status(400).json({ error: 'NOT VERIFIED'});
+            if (!user) {
+                return res.status(400).json({ error: 'No verified account found for this email.' });
             }
 
-            hashPassword = user.password;
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { verificationCode: verificationCode } }
+            );
 
             const { error: sendError } = await resend.emails.send({
                 from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
                 subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
-                text: `!\n\nYour password is: ${hashPassword}\n\nEnter this code on the app to complete your registration.
+                text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.
                 This email is a test if it is correct. TO BE REWRITTEN.`
             });
             if (sendError) throw new Error(sendError.message);
 
-            res.status(200).json({ Success: "SENT RECOVERY PASSWORD TO EMAIL"});
+            res.status(200).json({ success: "SENT RECOVERY CODE TO EMAIL" });
         }
         catch (e) {
             res.status(500).json({ error: e.toString() });
         }
     });
 
-    // Add friends API soon
-    /*app.post('/api/addcard', async (req, res, next) =>
+
+    app.post('/api/reset-password', async (req, res, next) =>
     {
-        const { userId, card, jwtToken } = req.body;
+        const { email, verificationCode, password, confirmpassword } = req.body;
 
-        if (!jwtToken) {
-            return res.status(200).json({ error: 'No token provided', jwtToken: '' });
+        if (!email) {
+            return res.status(400).json({ error: 'Username required.' });
+        }
+        if (!verificationCode) {
+            return res.status(400).json({ error: 'Verification code is required.' });
+        }
+        if (!password || !confirmpassword) {
+            return res.status(400).json({ error: 'Password and confirmation are required.' });
+        }
+        if (password !== confirmpassword) {
+            return res.status(400).json({ error: 'Passwords do not match.' });
         }
 
         try {
-            if (tokenHandler.isExpired(jwtToken)) {
-                return res.status(200).json({ error: 'The JWT is no longer valid', jwtToken: '' });
+            const db = client.db('large_project');
+
+            const user = await db.collection('users').findOne({ email: email, verified: true });
+
+            if (!user) {
+                return res.status(400).json({ error: 'No verified account found for this email.' });
             }
-        } catch (e) {
-            console.log(e.message);
+
+            if (user.verificationCode !== verificationCode) {
+                return res.status(400).json({ error: 'Verification code is incorrect.' });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { password: hashedPassword }, $unset: { verificationCode: '' } }
+            );
+
+            res.status(200).json({ success: "Password reset successful. Please login with the new password." });
         }
-
-        const newCard = { Card: card, UserId: userId };
-        var error = '';
-
-        try {
-            const db = client.db('COP4331Cards');
-            await db.collection('Cards').insertOne(newCard);
-        } catch (e) {
-            error = e.toString();
+        catch (e) {
+            res.status(500).json({ error: e.toString() });
         }
-
-        var refreshedToken = null;
-        try {
-            const refreshed = tokenHandler.refresh(jwtToken);
-            refreshedToken = refreshed.accessToken;
-        } catch (e) {
-            console.log(e.message);
-        }
-
-        res.status(200).json({ error: error, jwtToken: refreshedToken });
-    });*/
+    });
 
     app.post('/api/login', async (req, res, next) =>
     {
         const { login, password } = req.body;
+
+        if(!login || !password)
+        {
+            return res.status(400).json({ error: 'Login and password are required.' });
+        }
 
         const db = client.db('large_project');
         let ret;
@@ -208,69 +224,55 @@ exports.setApp = function (app, client) {
     });
 
 
-    // Search Friends API soon
-    /*app.post('/api/searchcards', async (req, res, next) =>
-    app.post('/api/register', async (req, res, next) =>
-    {
-        const { firstName, lastName, email, username, password } = req.body;
 
-        const newUser = {
-            FirstName: firstName,
-            LastName: lastName,
-            Email: email,
-            Username: username,
-            Password: password
-        };
 
-        var error = '';
+    app.post('/api/friends-list', async (req, res) => {
+        const { userId, page = 1, limit = 10 } = req.body;
 
-        try {
-            const db = client.db('COP4331Cards');
-
-            const existingUser = await db.collection('Users').findOne({ Login: username });
-            if(existingUser){
-                return res.status(200).json({ error: 'Username already taken' });
-            }
-
-            await db.collection('Users').insertOne(newUser);
-        } catch (e) {
-            error = e.toString();
-            return res.status(200).json({ error: error });
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required.' });
         }
 
-        res.status(200).json({ error: error });
+        try {
+            const db = client.db('large_project');
+
+            const skip = (page - 1) * limit;
+            const requesterId = new ObjectId(userId);
+
+            const [friendships, total] = await Promise.all([
+                db.collection('friendship')
+                    .find({ requesterId: requesterId })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray(),
+                db.collection('friendship')
+                    .countDocuments({ requesterId: requesterId })
+            ]);
+
+            const recipientIds = friendships.map(f => f.recipientId);
+
+            const friends = await db.collection('user')
+                .find(
+                    { _id: { $in: recipientIds } },
+                    { projection: { firstName: 1, lastName: 1, birthday: 1 } }
+                )
+                .toArray();
+
+            res.status(200).json({
+                friends,
+                page,
+                totalPages: Math.ceil(total / limit),
+                total
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
     });
 
 
 
-    app.post('/api/searchcards', async (req, res, next) =>
-    {
-        var error = '';
-        const { userId, search, jwtToken } = req.body;
 
-        try {
-            if (tokenHandler.isExpired(jwtToken)) {
-                return res.status(200).json({ error: 'The JWT is no longer valid', jwtToken: '' });
-            }
-        } catch (e) {
-            console.log(e.message);
-        }
 
-        var _search = search.trim();
-        const db = client.db('COP4331Cards');
-        const results = await db.collection('Cards').find({"Card":{$regex:_search+'.*',
-                $options:'i'}}).toArray();
 
-        var _ret = results.map(item => item.Card);
 
-        var refreshedToken = null;
-        try {
-            const refreshed = tokenHandler.refresh(jwtToken);
-            refreshedToken = refreshed.accessToken;
-        } catch (e) {
-            console.log(e.message);
-        }
-
-        res.status(200).json({ results: _ret, error: error, jwtToken: refreshedToken });
-    });*/
 }
