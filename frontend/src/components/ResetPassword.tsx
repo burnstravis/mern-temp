@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { buildPath } from "./path.ts";
 import {useNavigate} from "react-router-dom";
 
 interface ResetPasswordForm {
+  email: string;
+  verificationCode: string;
   newPassword: string;
   confirmPassword: string;
 }
@@ -15,25 +17,16 @@ const ResetPassword: React.FC = () => {
 
   const navigate = useNavigate();
   const [formData, setFormData] = useState<ResetPasswordForm>({
+    email: '',
+    verificationCode: '',
     newPassword: '',
     confirmPassword: ''
   });
 
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
-  const [resetToken, setResetToken] = useState<string | null>(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
 
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    setResetToken(token);
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -44,6 +37,16 @@ const ResetPassword: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
+
+    if(!formData.verificationCode){
+      setError('Please enter valid verification code.');
+      return false;
+    }
+    if(!formData.email) {
+      setError('Please enter account email.');
+      return false;
+    }
+
     if (!formData.newPassword || !formData.confirmPassword) {
       setError('All fields are required.');
       return false;
@@ -67,21 +70,20 @@ const ResetPassword: React.FC = () => {
     setError('');
     setSuccess('');
 
-    if (!resetToken) {
-      setError('Invalid or expired reset link.');
-      return;
-    }
-
     if (!validateForm()) return;
+
+    const obj = {
+        email:formData.email,verificationCode:formData.verificationCode,
+        password:formData.newPassword,
+        confirmpassword:formData.confirmPassword
+    };
+    const js = JSON.stringify(obj);
 
     try {
       const response = await fetch(buildPath('api/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: resetToken,
-          newPassword: formData.newPassword
-        })
+        body: js
       });
 
       const data: ResetPasswordResponse = await response.json();
@@ -92,7 +94,7 @@ const ResetPassword: React.FC = () => {
       }
 
       setSuccess('Password reset! Redirecting...');
-      setFormData({ newPassword: '', confirmPassword: '' });
+      setFormData({ email: '', verificationCode: '', newPassword: '', confirmPassword: '' });
 
 
       setTimeout(() => { navigate('/login'); }, 1500); //remove this when we reset-password api
