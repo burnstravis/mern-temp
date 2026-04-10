@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:friend_connector_mobile/services/constants.dart';
@@ -20,9 +21,6 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-
-        debugPrint("Server Response: $data");
-
         return data;
       } else {
         return {'error': 'Server returned status ${response.statusCode}'};
@@ -61,6 +59,32 @@ class ApiService {
 
         final Map<String, dynamic> errorResponse = jsonDecode(response.body);
         return {'error': errorResponse['error'] ?? 'Registration failed'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyEmail(
+      String email,
+      String code
+      ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-email'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'code': code
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+
+        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
+        return {'error': errorResponse['error'] ?? 'Verification failed'};
       }
     } catch (e) {
       return {'error': 'Connection failed: $e'};

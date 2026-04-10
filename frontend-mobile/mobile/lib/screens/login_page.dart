@@ -66,15 +66,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _doForgotPassword() {
 
-    Future.delayed(const Duration(milliseconds: 1200), () {
+    Future.delayed(const Duration(milliseconds: 200), () {
       if (!mounted) return;
 
-      Navigator.pushAndRemoveUntil(
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ForgotPasswordPage(),
         ),
-            (route) => false,
       );
     });
 
@@ -204,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _doForgotPassword,
+                          onPressed: _doForgotPassword,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFF0A500),
                             foregroundColor: Colors.white,
@@ -212,16 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(50),
                             ),
                           ),
-                          child: _isLoading
-                              ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                              : const Text(
+                          child: const Text(
                             "Forgot Password?",
                             style: TextStyle(
                               fontSize: 18,

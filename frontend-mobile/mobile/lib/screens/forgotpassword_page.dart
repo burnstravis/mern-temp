@@ -116,7 +116,13 @@ class _ForgotPasswordPageScreenState extends State<ForgotPasswordPage> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    if (_isLoading) {
+                      setState(() => _isLoading = false);
+                    } else {
+                      Navigator.pop(context);
+                    }
+                  },
                   child: const Text("← Back to Login", style: TextStyle(color: Colors.grey)),
                 )
               ],
