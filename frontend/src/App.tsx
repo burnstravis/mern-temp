@@ -13,6 +13,7 @@ import MessagesPage from "./pages/MessagesPage.tsx";
 import HomePage from "./pages/HomePage.tsx";
 import Navbar from "./components/Navbar.tsx";
 import FriendsPage from "./pages/FriendsPage.tsx";
+import AddFriendsPage from "./pages/AddFriendsPage.tsx";
 
 const ProtectedRoute = () => {
     const isLogged = localStorage.getItem('user_data');
@@ -38,13 +39,15 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgotPassword" element={<ForgotPasswordPage />} />
             <Route path="/resetPassword" element={<ResetPasswordPage />} />
-            <Route path="/notifications" element={<NotificationPage />} />
             <Route element={<ProtectedRoute />}>
                 <Route path="/cards" element={<CardPage />} />
                 <Route path="/conversation" element={<ConversationPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/home" element={<HomePage />} />
                 <Route path="/friends" element={<FriendsPage />} />
+                <Route path="/notifications" element={<NotificationPage />} />
+                <Route path="/addfriends" element={<AddFriendsPage />} />
+
             </Route>
         </Routes>
       </BrowserRouter>

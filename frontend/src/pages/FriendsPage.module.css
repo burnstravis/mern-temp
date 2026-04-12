@@ -9,6 +9,12 @@
     box-sizing: border-box;
 }
 
+.listAndAddContainer {
+    background-color: #ff0000;
+    display: flex;
+    flex-direction: row;
+}
+
 .friendsContainer {
     display: flex;
     flex-direction: column;
@@ -131,4 +137,61 @@
     border: none;
     border-radius: 50px;
     cursor: pointer;
+}
+
+#friendsSearch {
+    display: flex;
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-style: normal;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+    color: rgba(0, 0, 0, 0.7);
+    background: #ffffff;
+    margin-right: 8px;
+}
+
+#searchFriendsButton, .paginationControls button {
+    color: rgba(0, 0, 0, 0.7);
+    background: var(--bg-send-button);
+    font-style: italic;
+    font-weight: bold;
+    width: 15%;
+    height: 100%;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.paginationControls {
+    align-items: center;
+}
+
+.paginationControls button{
+    width: 25%;
+}
+
+.paginationControls span {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.friendsSearchWrapper, .paginationControls {
+    background: var(--sent-bg);
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    max-width: 560px;
+    width: 70%;
+    height: 55px;
+    box-sizing: border-box;
+    margin: 8px 0;
+    padding: 8px 8px;
+    border-radius: 20px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }

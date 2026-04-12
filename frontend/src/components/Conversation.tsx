@@ -1,7 +1,6 @@
-//import React, { useState } from 'react';
 //import { buildPath } from './path';
 //import {retrieveToken, storeToken} from '../tokenStorage';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import styles from '../pages/ConversationsPage.module.css'
 import {useNavigate} from "react-router-dom";
 
@@ -157,17 +156,23 @@ const fakeMessages = [
 function Conversation() {
 
     const navigate = useNavigate();
-    const [conversations, setConversations] = React.useState(fakeMessages);
+    const [conversations, setConversations] = useState(fakeMessages);
     //const [message, setMessage] =  useState('');
 
-    setConversations(fakeMessages);
     const _ud = localStorage.getItem('user_data');
 
-    if (!_ud) {
-        navigate('/');
-    }
     const ud = _ud ? JSON.parse(_ud) : { id: -1 };
     const userId = ud._id || ud.id;
+
+    useEffect(() => {
+        if (!_ud) {
+            navigate('/');
+        }
+        else{
+
+        }
+
+    }, [navigate, _ud]);
 
     // async function loadConversations()
     // {

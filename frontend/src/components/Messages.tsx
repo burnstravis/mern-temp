@@ -11,7 +11,7 @@ const fakeConversations = [
         participants: ["user_123", "friend_456"],
         lastMessageAt: "2026-04-03T10:30:00Z",
         otherUserName: "Sarah",
-        lastText: "See you at the teamteamteamteamteamteamteamteamteamteamteamteamteamteam meeting!"
+        lastText: "See you at the team meeting!"
     },
     {
         _id: "conv_002",
@@ -47,12 +47,12 @@ function Messages() {
 
     const _ud = localStorage.getItem('user_data');
 
-    if (!_ud) {
-        navigate('/');
-    }
     useEffect(() => {
+        if (!_ud) {
+            navigate('/');
+        }
         setConversations(fakeConversations);
-    })
+    }, [navigate, _ud]);
 
     // const ud = _ud ? JSON.parse(_ud) : { id: -1 };
     // const userId = ud._id || ud.id;
@@ -105,41 +105,13 @@ function Messages() {
         console.log("Pretend this opens the chat");
     }
 
-    async function createConversation(){
+    async function searchConversations(){
         console.log("Pretend this creates a new chat with a friend");
 
-        // if (!searchText.trim()) return;
-        //
-        // const token = retrieveToken();
-        // const obj = { userId: userId, recipientName: searchText, jwtToken: token };
-        // const js = JSON.stringify(obj);
-        //
-        // try {
-        //     const response = await fetch(buildPath('api/createConversation'), {
-        //         method: 'POST',
-        //         body: js,
-        //         headers: { 'Content-Type': 'application/json' }
-        //     });
-        //
-        //     const res = await response.json();
-        //
-        //     if (res.error && res.error.length > 0) {
-        //         setResults("API Error: " + res.error);
-        //         return;
-        //     } else {
-        //         setConversations([res.newConversation, ...conversations]);
-        //         setSearchText("");
-        //     }
-        //
-        //     if (res.accessToken) storeToken(res.accessToken);
-        //
-        //     const _results = res.results || [];
-        //     setCardList(_results.join(', '));
-        //     setResults('Card(s) have been retrieved');
-        //
-        // } catch (error: any) {
-        //     setResults("Search failed: " + error.toString());
-        // }
+        const filtered = fakeConversations.filter(f =>
+            f.otherUserName.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setConversations(filtered);
     }
 
     return (
@@ -159,7 +131,7 @@ function Messages() {
                         autoCapitalize="off"
                     />
 
-                    <button id={styles.addConversationButton} type="button" onClick={() => createConversation()}>Add</button>
+                    <button id={styles.searchConversationButton} type="button" onClick={() => searchConversations()}>Find</button>
                 </div>
 
 

@@ -1,4 +1,4 @@
-.messagesWrapper {
+.addfriendsWrapper {
     min-height: 100vh;
     background-color: #a89fd8;
     display: flex;
@@ -9,7 +9,7 @@
     box-sizing: border-box;
 }
 
-.messagesContainer {
+.addfriendsContainer {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -18,7 +18,7 @@
     max-width: 560px;
 }
 
-.messagesTitle {
+.addfriendsTitle {
     font-family: 'Brush Script MT', 'Dancing Script', cursive;
     font-size: 64px;
     color: #ffffff;
@@ -27,7 +27,7 @@
     text-shadow: 1px 2px 6px rgba(0,0,0,0.15);
 }
 
-.messagesSubtitle {
+.addfriendsSubtitle {
     font-family: Georgia, 'Times New Roman', serif;
     font-style: italic;
     font-size: 18px;
@@ -36,7 +36,7 @@
     text-align: center;
 }
 
-.allMessages {
+.addFriendsComponent{
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -48,32 +48,39 @@
     box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.conversations {
+.listUsersContainer {
     display: flex;
     align-items: center;
     flex-direction: column;
     background: none;
-    width: 80%;
+    width: 100%;
     justify-content: center;
     margin: 0;
 }
 
 
-.conversationCard{
+.userCard{
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     padding: 16px;
     background: #afa9ec;
     border-radius: 10px;
     margin: 8px 0;
-    cursor: pointer;
     width: 100%;
+    min-width: 400px;
     box-sizing: border-box;
     box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.conversationAvatar{
+.userCardInner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.userAvatar{
     text-align: left;
     display: flex;
     color: var(--text-dm-name);
@@ -83,7 +90,19 @@
     width: 100%;
 }
 
-.conversationDetails {
+
+.userDetails {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    font-style: normal;
+    font-size: 16px;
+    gap: 8px;
+    color: rgba(0, 0, 0, 0.79);
+    width: 100%;
+}
+
+.bottomRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -92,27 +111,31 @@
     width: 100%;
 }
 
-.lastText {
+.friendsHeader {
+    align-self: center;
     font-family: Georgia, 'Times New Roman', serif;
-    font-style: normal;
-    font-size: 16px;
-    color: rgba(0, 0, 0, 0.79);
+    font-style: italic;
+    font-weight: bold;
+    font-size: 32px;
+    color: #3c3489;
     margin: 0;
-    width: 80%;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-wrap: nowrap;
 }
 
-.timestamp {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-style: normal;
-    font-size: 12px;
-    color: rgba(0, 0, 0, 0.6);
+.addFriendsSearchContainer {
+    background: var(--sent-bg);
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    max-width: 560px;
+    width: 100%;
+    height: 55px;
+    box-sizing: border-box;
+    margin: 8px 0;
+    padding: 8px 8px;
+    border-radius: 20px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }
-
-#conversationSearch {
+#addFriendSearch {
     display: flex;
     width: 100%;
     border: none;
@@ -125,34 +148,17 @@
     white-space: pre-wrap;
     color: rgba(0, 0, 0, 0.7);
     background: #ffffff;
-    margin-right: 8px;
 }
 
-#searchConversationButton {
+#sendRequest {
     color: rgba(0, 0, 0, 0.7);
     background: var(--bg-send-button);
     font-style: italic;
     font-weight: bold;
-    width: 15%;
-    height: 100%;
+    width: 60px;
+    height: 50px;
     font-size: 16px;
     border: none;
     border-radius: 10px;
     cursor: pointer;
-}
-
-.conversationHeader {
-    background: var(--sent-bg);
-    display: flex;
-    justify-content: space-between;
-    flex-direction: row;
-    max-width: 560px;
-    width: 100%;
-    height: 55px;
-    margin: 0;
-    box-sizing: border-box;
-    margin: 8px 0;
-    padding: 8px 8px;
-    border-radius: 20px;
-    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
 }

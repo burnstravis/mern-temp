@@ -21,6 +21,7 @@ const Navbar = () => {
                 <button className={styles.homeButton} onClick={() => navigate('/home')}>Home</button>
                 <button className={styles.messagesButton} onClick={() => navigate('/messages')}>Messages</button>
                 <button className={styles.friendsButton} onClick={() => navigate('/friends')}>Friends</button>
+                <button className={styles.addfriendsButton} onClick={() => navigate('/addfriends')}>Discover Friends</button>
                 <button className={styles.notificationsButton} onClick={() => navigate('/notifications')}>Notifications</button>
                 <button className={styles.settingsButton} onClick={() => navigate('/settings')}>Settings</button>
             </div>
