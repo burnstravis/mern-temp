@@ -222,50 +222,105 @@ exports.setApp = function (app, client) {
         }
         res.status(200).json(ret);
     });
+    
+    app.get('/api/friends', async (req, res) => {
+        // 1. Pull and Sanitize Query Parameters
+        // Sanitizing search to prevent Regex Injection (ReDoS attacks)
+        const search = req.query.search || "";
+        const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+        // Math.max/min ensures we don't pass NaN, 0, or negative numbers to MongoDB
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+        
+        let jwtToken = req.headers['authorization']; 
 
-
-
-    app.post('/api/friends-list', async (req, res) => {
-        const { userId, page = 1, limit = 10 } = req.body;
-
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required.' });
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
         }
 
         try {
+            // Standardize token: Remove "Bearer " prefix if it exists
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7, jwtToken.length);
+            }
+
             const db = client.db('large_project');
+            
+            // 2. Security: Verify and decode the token
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+            
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            if (!decoded || !decoded.id) {
+                return res.status(401).json({ error: 'Invalid token payload.' });
+            }
+            
+            const requesterId = new ObjectId(decoded.id);
+            const skip = (page - 1) * limit; 
 
-            const skip = (page - 1) * limit;
-            const requesterId = new ObjectId(userId);
+            // 3. Find all friendships where the user is either requester or recipient
+            // NOTE: Add .find({ ..., status: 'accepted' }) back here later if you want 
+            // to hide pending requests from this list.
+            const friendshipDocs = await db.collection('friendships')
+                .find({ 
+                    $or: [{ requesterid: requesterId }, { recepientid: requesterId }]
+                })
+                .toArray();
 
-            const [friendships, total] = await Promise.all([
-                db.collection('friendship')
-                    .find({ requesterId: requesterId })
+            // 4. Map to get the ID of the *other* person in each document
+            const friendIds = friendshipDocs.map(f => 
+                f.requesterid.equals(requesterId) ? f.recepientid : f.requesterid
+            );
+            
+            // Refresh token to keep the sliding session alive
+            const refreshed = tokenHandler.refresh(jwtToken);
+            
+            // If they have no friends, return empty now to save DB resources
+            if (friendIds.length === 0) {
+                return res.status(200).json({
+                    friends: [],
+                    page: page,
+                    totalPages: 0,
+                    total: 0,
+                    accessToken: refreshed.accessToken
+                });
+            }
+
+            // 5. Build the Filter for the 'users' collection
+            const userFilter = { _id: { $in: friendIds } };
+
+            if (sanitizedSearch) {
+                const searchRegex = { $regex: sanitizedSearch, $options: 'i' };
+                userFilter.$or = [
+                    { firstName: searchRegex },
+                    { lastName: searchRegex },
+                    { username: searchRegex }
+                ];
+            }
+
+            // 6. Fetch user details and count matching friends in parallel
+            const [friends, total] = await Promise.all([
+                db.collection('users')
+                    .find(userFilter)
+                    .project({ firstName: 1, lastName: 1, username: 1, birthday: 1 })
                     .skip(skip)
                     .limit(limit)
                     .toArray(),
-                db.collection('friendship')
-                    .countDocuments({ requesterId: requesterId })
+                db.collection('users').countDocuments(userFilter)
             ]);
-
-            const recipientIds = friendships.map(f => f.recipientId);
-
-            const friends = await db.collection('user')
-                .find(
-                    { _id: { $in: recipientIds } },
-                    { projection: { firstName: 1, lastName: 1, birthday: 1 } }
-                )
-                .toArray();
 
             res.status(200).json({
                 friends,
-                page,
+                page: page,
                 totalPages: Math.ceil(total / limit),
-                total
+                total,
+                accessToken: refreshed.accessToken
             });
         } catch (e) {
-            res.status(500).json({ error: e.toString() });
+            console.error("Search Error:", e);
+            res.status(500).json({ error: "Internal server error" });
         }
     });
 
