@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 //import { buildPath } from './path';
-import {retrieveToken, storeToken} from '../tokenStorage';
+import {retrieveToken} from '../tokenStorage';
 import styles from '../pages/AddFriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
 import {buildPath} from "./path.ts";
