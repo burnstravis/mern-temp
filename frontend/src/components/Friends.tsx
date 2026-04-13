@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import { buildPath } from './path';
-import { retrieveToken  } from '../tokenStorage';
+import { retrieveToken, storeToken  } from '../tokenStorage';
 import styles from '../pages/FriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
 
@@ -51,25 +51,38 @@ function Friends() {
         setLoading(true);
         try {
             const token = retrieveToken();
-            const response = await fetch(buildPath('api/friends-list'), {
-                method: 'POST',
-                body: JSON.stringify({ jwtToken: token, page: pageNumber, limit: 10}),
+
+            const queryParams = new URLSearchParams({
+                page: pageNumber.toString(),
+                limit: "10",
+                search: searchText
+            });
+
+            const response = await fetch(`${buildPath('api/friends')}?${queryParams}`, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
             const res = await response.json();
 
-            if (res.error && res.error.length > 0) {
-                setMessage("API Error: " + res.error);
-                if (res.error.includes("expired") || res.error.includes("valid")) {
+            if (!response.ok || res.error) {
+                const errorMsg = res.error || "An unknown error occurred";
+                setMessage("API Error: " + errorMsg);
+
+                if (response.status === 401 || errorMsg.includes("expired") || errorMsg.includes("valid")) {
                     navigate('/');
                 }
                 return;
             } else {
                 setFriends(res.friends || []);
                 setTotalPages(res.totalPages || 1);
+
+                if (res.accessToken) {
+                    storeToken(res.accessToken);
+                }
             }
         } catch (e) {
             setMessage("Failed to load friends" + e);
