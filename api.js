@@ -265,13 +265,13 @@ exports.setApp = function (app, client) {
             // to hide pending requests from this list.
             const friendshipDocs = await db.collection('friendships')
                 .find({
-                    $or: [{ requesterid: requesterId }, { recepientid: requesterId }]
+                    $or: [{ requesterId: requesterId }, { recipientId: requesterId }]
                 })
                 .toArray();
 
             // 4. Map to get the ID of the *other* person in each document
             const friendIds = friendshipDocs.map(f =>
-                f.requesterid.equals(requesterId) ? f.recepientid : f.requesterid
+                f.requesterId.equals(requesterId) ? f.recipientId : f.requesterId
             );
 
             // Refresh token to keep the sliding session alive
@@ -318,6 +318,8 @@ exports.setApp = function (app, client) {
                 total,
                 accessToken: refreshed.accessToken
             });
+
+
         } catch (e) {
             console.error("Search Error:", e);
             res.status(500).json({ error: "Internal server error" });

@@ -4,26 +4,18 @@ import { retrieveToken, storeToken  } from '../tokenStorage';
 import styles from '../pages/FriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
 
-interface FriendDetails {
+interface Friend {
     _id: string;
-    username: string;
     firstName: string;
     lastName: string;
+    username: string;
     birthday: string;
-}
-
-interface Friendship {
-    _id: string;
-    status: 'pending' | 'accepted';
-    requesterId: string;
-    recipientId: string;
-    friendDetails: FriendDetails;
 }
 
 function Friends() {
 
     const navigate = useNavigate();
-    const [friends, setFriends] = useState<Friendship[]>([]);
+    const [friends, setFriends] = useState<Friend[]>([]);
     const [searchText, setSearchText] = useState('');
     const [activeSearch, setActiveSearch] = useState('');
     const [pageNumber, setPageNumber] = useState(1);
@@ -36,7 +28,7 @@ function Friends() {
 
 
     const ud = _ud ? JSON.parse(_ud) : null;
-    const userId = ud._id || ud.id;
+    //const userId = ud._id || ud.id;
 
     useEffect(() => {
         if (!ud) {
@@ -44,7 +36,7 @@ function Friends() {
         } else {
             fetchFriends(pageNumber);
         }
-    }, [pageNumber]);
+    }, [pageNumber, searchText]);
 
     async function fetchFriends(pageNumber: number) {
 
@@ -68,6 +60,7 @@ function Friends() {
 
             const res = await response.json();
 
+
             if (!response.ok || res.error) {
                 const errorMsg = res.error || "An unknown error occurred";
                 setMessage("API Error: " + errorMsg);
@@ -77,6 +70,7 @@ function Friends() {
                 }
                 return;
             } else {
+
                 setFriends(res.friends || []);
                 setTotalPages(res.totalPages || 1);
 
@@ -100,7 +94,7 @@ function Friends() {
 
 
     const filteredFriends = friends.filter(f => {
-        const friend = f.friendDetails;
+        const friend = f;
         if (!friend) return false;
 
         const term = activeSearch.toLowerCase();
@@ -116,65 +110,15 @@ function Friends() {
         setActiveSearch(searchText);
     };
 
-    const loadFriendProfile = (friendshipId: string) => {
-        const friendUserId = getFriendId(friendshipId);
-        if (friendUserId) {
-            console.log("Navigating to profile of:", friendUserId);
-            // navigate(`/profile/${friendUserId}`);
-        }
-    };
-
-    const getFriendId = (friendshipId: string) => {
-        const friendship = friends.find(f => f._id === friendshipId);
-        if (!friendship) return null;
-        return friendship.requesterId === userId ? friendship.recipientId : friendship.requesterId;
-    };
-
-    const handleAccept = async (friendshipId: string) => {
-        console.log("Accepting request:", friendshipId);
-
-        //CALL API FOR ACCEPTING FRIEND REQUEST
-        setPageNumber(1);
-        fetchFriends(pageNumber);
-    };
-
     const formatDateOfBirth = (date: any) => {
         if (!date) return "N/A";
         const cleanDate = date.includes('T') ? date.split('T')[0] : date;
         return cleanDate.replace(/-/g, "/");
     };
 
-    const handleReject = async (friendshipId: string) => {
-        console.log("Rejecting/Removing request:", friendshipId);
-
-        // try {
-        //     const token = retrieveToken();
-        //
-        //     const response = await fetch(buildPath('api/removeFriend'), {
-        //         method: 'POST',
-        //         body: JSON.stringify({
-        //             friendshipId: friendshipId,
-        //             jwtToken: token
-        //         }),
-        //         headers: { 'Content-Type': 'application/json' }
-        //     });
-        //
-        //     const res = await response.json();
-        //
-        //     if (res.error) {
-        //         setMessage("Failed to remove: " + res.error);
-        //     } else {
-        //         setFriends(prev => prev.filter(f => f._id !== friendshipId));
-        //     }
-        // } catch (e) {
-        //     setMessage("Error removing friend: " + e);
-        // }
-
-
-        //FOR HARDCODED DATA
-        setFriends(prevFriends => prevFriends.filter(f => f._id !== friendshipId));
-    };
-
+    async function loadFriendProfile(friendId: string) {
+        console.log("opens chat with user" + friendId);
+    }
 
     return (
         <div className={styles.friendsList}>
@@ -204,8 +148,7 @@ function Friends() {
             ) : (
                 <>
                     {filteredFriends.map((friendship) => {
-                        const isRequester = friendship.requesterId === userId;
-                        const friendData = friendship.friendDetails;
+                        const friendData = friendship;
 
                         if (!friendData) return null;
 
@@ -217,44 +160,11 @@ function Friends() {
 
                                 <div className={styles.friendInfo}>
                                     <span className={styles.friendName}>{displayName}</span>
-                                    <div className={styles.friendStatus}>
-                                        {friendship.status === 'pending' ? (
-                                            <span className={styles.pendingTag}>
-                                        {isRequester ? "Request Sent" : "Wants to be friends"}
-                                    </span>
-                                        ) : (
-                                            <span className={styles.friendTag}>Friend</span>
-                                        )}
-                                    </div>
                                     <span className={styles.birthday}>DOB: {formatDateOfBirth(friendData.birthday)}</span>
                                 </div>
 
                                 <div className={styles.actionArea}>
-                                    {friendship.status === 'pending' && !isRequester ? (
-                                        <div className={styles.actionButtons}>
-                                            <button
-                                                className={styles.acceptBtn}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAccept(friendship._id);
-                                                }}
-                                            >Accept
-                                            </button>
-
-                                            <button
-                                                className={styles.rejectBtn}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleReject(friendship._id);
-                                                }}
-                                            >Reject
-                                            </button>
-                                        </div>
-
-
-                                    ) : (
-                                        <button className={styles.viewBtn}>Open Chat</button>
-                                    )}
+                                    <button className={styles.viewBtn}>Open Chat</button>
                                 </div>
                             </div>
                         );
