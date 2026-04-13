@@ -36,7 +36,7 @@ function Friends() {
         } else {
             fetchFriends(pageNumber);
         }
-    }, [pageNumber, searchText]);
+    }, [pageNumber]);
 
     async function fetchFriends(pageNumber: number) {
 
@@ -108,6 +108,8 @@ function Friends() {
 
     const handleSearch = () => {
         setActiveSearch(searchText);
+        setPageNumber(1);
+        fetchFriends(pageNumber);
     };
 
     const formatDateOfBirth = (date: any) => {
