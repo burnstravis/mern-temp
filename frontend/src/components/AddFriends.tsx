@@ -1,49 +1,76 @@
 import {useEffect, useState} from 'react';
 //import { buildPath } from './path';
-import { retrieveToken } from '../tokenStorage';
+import {retrieveToken, storeToken} from '../tokenStorage';
 import styles from '../pages/AddFriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
 import {buildPath} from "./path.ts";
 
-
+const fakeUsers = [
+    {
+        _id: '69d4944bdc68a7a71ca1c6e4',
+        username: 'tech_wizard',
+        firstName: 'Alice',
+        lastName: 'Smith',
+        birthday: '1995-11-23T00:00:00.000Z'
+    },
+    {
+        _id: '69d4944bdc68a7a71ca1c6e5',
+        username: 'nature_lover',
+        firstName: 'Bob',
+        lastName: 'Green',
+        birthday: '1992-02-14T00:00:00.000Z'
+    }
+];
 
 function AddFriends() {
 
     const navigate = useNavigate();
 
     const [searchText, setSearchText] = useState('');
-    const [users, setUsers] = useState([
-        { _id: '1', username: 'jdoe88', firstName: 'John', lastName: 'Doe', birthday: '1988-05-12' },
-        { _id: '2', username: 'tech_wizard', firstName: 'Alice', lastName: 'Smith', birthday: '1995-11-23' },
-        { _id: '3', username: 'nature_lover', firstName: 'Bob', lastName: 'Green', birthday: '1992-02-14' },
-    ]);
+    const [users, setUsers] = useState(fakeUsers);
     const [message,setMessage] = useState('');
 
 
     const _ud = localStorage.getItem('user_data');
+    //const ud = _ud ? JSON.parse(_ud) : null;
+    //const userId = ud._id || ud.id;
 
     useEffect(() => {
         if (!_ud) {
             navigate('/');
         }
         else{
-            //fetchUser(searchText);
-            //setUsers()
+            fetchUsers()
         }
 
-    }, [navigate, _ud]);
+    }, [navigate, _ud, searchText]);
 
-    // const ud = _ud ? JSON.parse(_ud) : { id: -1 };
-    // const userId = ud._id || ud.id;
 
+
+    async function fetchUsers() {
+        try{
+            setUsers(fakeUsers)
+        }
+        catch(e){
+            setMessage('Unable to fetch users: ' + e);
+        }
+    }
 
     async function sendFriendRequest(targetUsername: string) {
 
+        setMessage('');
+
         try {
             const token = retrieveToken();
+
+            if (!token) {
+                navigate('/');
+                return;
+            }
+
             const response = await fetch(buildPath('api/add-friend'), {
                 method: 'POST',
-                body: JSON.stringify({ username: targetUsername, jwtToken: token, limit: 10}),
+                body: JSON.stringify({ username: targetUsername, jwtToken: token}),
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -53,8 +80,15 @@ function AddFriends() {
 
             if (res.error && res.error.length > 0) {
                 setMessage(res.error);
+
+                if (res.error.toLowerCase().includes("expired") || res.error.toLowerCase().includes("jwt")) {
+                    navigate('/');
+                }
                 return;
             }
+
+            setMessage(`Friend request sent to @${targetUsername}!`);
+
         } catch (e) {
             setMessage('Unable to send a friend request: ' + e);
         }
@@ -108,7 +142,7 @@ function AddFriends() {
                                 <button
                                     id={styles.sendRequest}
                                     type="button"
-                                    onClick={() => sendFriendRequest(user._id)}
+                                    onClick={() => sendFriendRequest(user.username)}
                                 >
                                     Send
                                 </button>

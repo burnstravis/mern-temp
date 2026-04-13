@@ -1,6 +1,6 @@
 //import { buildPath } from './path';
 //import {retrieveToken, storeToken} from '../tokenStorage';
-import React, {useEffect, useState} from 'react';
+import  {useEffect, useState} from 'react';
 import styles from '../pages/ConversationsPage.module.css'
 import {useNavigate} from "react-router-dom";
 
@@ -169,7 +169,7 @@ function Conversation() {
             navigate('/');
         }
         else{
-
+            setConversations(fakeMessages)
         }
 
     }, [navigate, _ud]);
@@ -214,7 +214,7 @@ function Conversation() {
                 <h1 className={styles.messageReceiverName}>Bob</h1>
                 <div className={styles.todaysPrompt}>
                     <p id={styles.promptHeader}>Today's Prompt</p>
-                    <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenienceinconvenience people?"</p>
+                    <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenience people?"</p>
                 </div>
             </div>
 

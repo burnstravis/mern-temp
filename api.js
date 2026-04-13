@@ -227,45 +227,90 @@ exports.setApp = function (app, client) {
 
 
     app.post('/api/friends-list', async (req, res) => {
-        const { userId, page = 1, limit = 10 } = req.body;
+        const { jwtToken, page = 1, limit = 10 } = req.body;
 
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required.' });
+        if (!jwtToken) {
+            return res.status(400).json({ error: 'JWT Token is required.', friends: [], accessToken: '' });
         }
 
         try {
             const db = client.db('large_project');
 
-            const skip = (page - 1) * limit;
-            const requesterId = new ObjectId(userId);
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', friends: [], accessToken: '' });
+            }
 
-            const [friendships, total] = await Promise.all([
-                db.collection('friendship')
-                    .find({ requesterId: requesterId })
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = decoded?.id;
+
+            if (!userId) {
+                return res.status(200).json({ error: 'Invalid token payload.', friends: [], accessToken: '' });
+            }
+
+            const userObjectId = new ObjectId(userId);
+            const skip = (page - 1) * limit;
+
+            const [friendshipDocs, total] = await Promise.all([
+                db.collection('friendships')
+                    .find({
+                        $or: [{ requesterId: userObjectId }, { recipientId: userObjectId }]
+                    })
                     .skip(skip)
                     .limit(limit)
                     .toArray(),
-                db.collection('friendship')
-                    .countDocuments({ requesterId: requesterId })
+                db.collection('friendships').countDocuments({
+                    $or: [{ requesterId: userObjectId }, { recipientId: userObjectId }]
+                })
             ]);
 
-            const recipientIds = friendships.map(f => f.recipientId);
+            if (friendshipDocs.length === 0) {
+                const refreshed = tokenHandler.refresh(jwtToken);
+                return res.status(200).json({
+                    friends: [],
+                    page,
+                    totalPages: 0,
+                    total: 0,
+                    accessToken: refreshed.accessToken,
+                    error: ''
+                });
+            }
 
-            const friends = await db.collection('user')
-                .find(
-                    { _id: { $in: recipientIds } },
-                    { projection: { firstName: 1, lastName: 1, birthday: 1 } }
-                )
+            const friendIds = friendshipDocs.map(f =>
+                f.requesterId.toString() === userObjectId.toString() ? f.recipientId : f.requesterId
+            );
+
+            const userProfiles = await db.collection('users')
+                .find({ _id: { $in: friendIds.map(id => new ObjectId(id)) } })
+                .project({ username: 1, firstName: 1, lastName: 1, birthday: 1 })
                 .toArray();
 
+            const combinedResults = friendshipDocs.map(f => {
+                const otherId = f.requesterId.toString() === userObjectId.toString() ? f.recipientId : f.requesterId;
+                const profile = userProfiles.find(p => p._id.toString() === otherId.toString());
+
+                return {
+                    _id: f._id,
+                    status: f.status,
+                    requesterId: f.requesterId,
+                    recipientId: f.recipientId,
+                    friendDetails: profile || null
+                };
+            });
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
             res.status(200).json({
-                friends,
+                friends: combinedResults,
+                total,
                 page,
                 totalPages: Math.ceil(total / limit),
-                total
+                accessToken: refreshed.accessToken,
+                error: ''
             });
+
         } catch (e) {
-            res.status(500).json({ error: e.toString() });
+            console.error(e);
+            res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
 
@@ -279,6 +324,7 @@ exports.setApp = function (app, client) {
 
         const db = client.db('large_project');
         let ret;
+
 
         try {
             if (tokenHandler.isExpired(jwtToken)) {
@@ -299,6 +345,8 @@ exports.setApp = function (app, client) {
                 verified: true
             });
 
+
+
             if (!recipient) {
                 ret = { error: 'User not found.', accessToken: '' };
                 return res.status(200).json(ret);
@@ -314,20 +362,24 @@ exports.setApp = function (app, client) {
 
             const existing = await db.collection('friendships').findOne({
                 $or: [
-                    { requesterid: requesterObjectId, recepientid: recipientObjectId },
-                    { requesterid: recipientObjectId, recepientid: requesterObjectId }
+                    { requesterId: requesterObjectId, recipientId: recipientObjectId },
+                    { requesterId: recipientObjectId, recipientId: requesterObjectId }
                 ],
                 status: { $in: ['pending', 'accepted'] }
             });
 
             if (existing) {
-                ret = { error: 'Friend already exists.', accessToken: '' };
+                if (existing.status === 'pending') {
+                    ret = { error: 'Request already sent.', accessToken: '' };
+                } else {
+                    ret = { error: 'Friend already exists.', accessToken: '' };
+                }
                 return res.status(200).json(ret);
             }
 
             await db.collection('friendships').insertOne({
-                requesterid: requesterObjectId,
-                recepientid: recipientObjectId,
+                requesterId: requesterObjectId,
+                recipientId: recipientObjectId,
                 status: 'pending'
             });
 
