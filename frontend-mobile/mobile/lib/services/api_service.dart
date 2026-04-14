@@ -143,35 +143,65 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> friendsList(
-      String userId,
-      int page,
-      int limit,
+  static Future<Map<String, dynamic>> friendsList({
+      required String jwtToken,
+      String search = "",
+      int page = 1,
+      int limit = 10,
+    }) async {
+      try {
+        final Uri uri = Uri.parse('$baseUrl/api/friends').replace(
+          queryParameters: {
+            'search': search,
+            'page': page.toString(),
+            'limit': limit.toString(),
+          },
+        );
+
+        final response = await http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $jwtToken',
+          },
+        );
+
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        if (response.statusCode == 200) {
+          return data;
+        } else {
+          return {'error': data['error'] ?? 'Failed to fetch friends'};
+        }
+      } catch (e) {
+        return {'error': 'Connection failed: $e'};
+      }
+    }
+
+  static Future<Map<String, dynamic>> addFriend(
+      String username,
+      String jwtToken,
       ) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/friends-list'),
+        Uri.parse('$baseUrl/api/add-friend'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'userId': userId,
-          'page': page,
-          'limit': limit,
+          'username': username,
+          'jwtToken': jwtToken,
         }),
       );
 
-      final dynamic decodedData = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return decodedData;
+        return data;
       } else {
-        return {
-          'error': (decodedData is Map)
-              ? decodedData['error']
-              : 'Failed to load friends list'
-        };
+        return {'error': 'Server error ${response.statusCode}'};
       }
     } catch (e) {
       return {'error': 'Connection failed: $e'};
     }
   }
+
 }
