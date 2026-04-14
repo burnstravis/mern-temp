@@ -1,242 +1,195 @@
-//import { buildPath } from './path';
-//import {retrieveToken, storeToken} from '../tokenStorage';
+import { buildPath } from './path';
+import {retrieveToken, storeToken} from '../tokenStorage';
 import  {useEffect, useState} from 'react';
 import styles from '../pages/ConversationsPage.module.css'
-import {useNavigate} from "react-router-dom";
+import {useLocation, useNavigate, useParams} from "react-router-dom";
 
-const fakeMessages = [
+const conversationWithFriend1 = [
     {
-        _id: "m1",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Yo random question",
-        createdAt: "2026-04-02T21:50:00Z"
+        _id: "m101",
+        conversationId: "conv_alpha",
+        senderId: "69d4944bdc68a7a71ca1c6e3", // Them
+        text: "Did you finish that report yet?",
+        createdAt: "2026-04-13T10:00:00Z"
     },
     {
-        _id: "m2",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "This already sounds dangerous",
-        createdAt: "2026-04-02T21:52:00Z"
+        _id: "m102",
+        conversationId: "conv_alpha",
+        senderId: "69d48e049063fbc48903272f", // Me
+        text: "Almost! Just need to fix the charts. Why, you heading out early?",
+        createdAt: "2026-04-13T10:05:00Z"
     },
     {
-        _id: "m3",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Would you rather fight 1 horse-sized duck or 100 duck-sized horses",
-        createdAt: "2026-04-02T21:53:30Z"
+        _id: "m103",
+        conversationId: "conv_alpha",
+        senderId: "69d4944bdc68a7a71ca1c6e3", // Them
+        text: "Yeah, thinking of hitting that new taco spot. Interested?",
+        createdAt: "2026-04-13T10:06:20Z"
     },
     {
-        _id: "m4",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "100 duck-sized horses easy",
-        createdAt: "2026-04-02T21:54:10Z"
-    },
-    {
-        _id: "m5",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Nah you're underestimating the swarm",
-        createdAt: "2026-04-02T21:55:00Z"
-    },
-    {
-        _id: "m6",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Bro it's tiny horses, just start kicking",
-        createdAt: "2026-04-02T21:55:45Z"
-    },
-    {
-        _id: "m7",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "You think you'd win against 100 of anything??",
-        createdAt: "2026-04-02T21:56:30Z"
-    },
-    {
-        _id: "m8",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Confidence is key",
-        createdAt: "2026-04-02T21:57:05Z"
-    },
-    {
-        _id: "m9",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "That horse-sized duck is terrifying though",
-        createdAt: "2026-04-02T21:58:10Z"
-    },
-    {
-        _id: "m10",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Yeah one bite and it's over",
-        createdAt: "2026-04-02T21:59:00Z"
-    },
-    {
-        _id: "m11",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Exactly. At least with the small ones you have a chance",
-        createdAt: "2026-04-02T22:00:15Z"
-    },
-    {
-        _id: "m12",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Also imagine explaining you lost to a giant duck",
-        createdAt: "2026-04-02T22:01:00Z"
-    },
-    {
-        _id: "m13",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Honestly that's the worst part",
-        createdAt: "2026-04-02T22:02:20Z"
-    },
-    {
-        _id: "m14",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Alright new question",
-        createdAt: "2026-04-02T22:03:00Z"
-    },
-    {
-        _id: "m15",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Go ahead",
-        createdAt: "2026-04-02T22:04:10Z"
-    },
-    {
-        _id: "m16",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "If animals could talk which one would be the most annoying",
-        createdAt: "2026-04-02T22:05:00Z"
-    },
-    {
-        _id: "m17",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Seagulls and it's not even close",
-        createdAt: "2026-04-02T22:05:45Z"
-    },
-    {
-        _id: "m18",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "They'd just yell 'MINE' at everything",
-        createdAt: "2026-04-02T22:06:20Z"
-    },
-    {
-        _id: "m19",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "And steal your foodteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteamteam while trash talking you",
-        createdAt: "2026-04-02T22:07:05Z"
-    },
-    {
-        _id: "m20",
-        conversationId: "conv_001",
-        senderId: "69cef5e1e3ca7a5c4f11f4d4",
-        text: "Yeah I'd never go outside again",
-        createdAt: "2026-04-02T22:08:00Z"
-    },
-    {
-        _id: "m21",
-        conversationId: "conv_001",
-        senderId: "69d48e049063fbc48903272f",
-        text: "Same honestly 😂",
-        createdAt: "2026-04-02T22:08:30Z"
+        _id: "m104",
+        conversationId: "conv_alpha",
+        senderId: "69d48e049063fbc48903272f", // Me
+        text: "Tacos? Say no more. I'll be done in 20.",
+        createdAt: "2026-04-13T10:07:45Z"
     }
 ];
+
+const conversationWithFriend2 = [
+    {
+        _id: "m201",
+        conversationId: "conv_beta",
+        senderId: "69d48e049063fbc48903272f", // Me
+        text: "Saw today's prompt. I'd definitely just hide people's car keys 5 minutes before they leave.",
+        createdAt: "2026-04-14T08:30:00Z"
+    },
+    {
+        _id: "m202",
+        conversationId: "conv_beta",
+        senderId: "69dc31b1435eea372fed382c", // Them
+        text: "That is evil. I'd just slightly unscrew every lightbulb in the house.",
+        createdAt: "2026-04-14T08:32:15Z"
+    },
+    {
+        _id: "m203",
+        conversationId: "conv_beta",
+        senderId: "69d48e049063fbc48903272f", // Me
+        text: "Classic. Or just stand behind them and whisper 'is it cold in here?'",
+        createdAt: "2026-04-14T08:33:50Z"
+    }
+];
+
+
 function Conversation() {
 
     const navigate = useNavigate();
-    const [conversations, setConversations] = useState(fakeMessages);
-    //const [message, setMessage] =  useState('');
+    const { friendId } = useParams();
+    const { state } = useLocation();
+
+    const conversation = (friendId == "69d4944bdc68a7a71ca1c6e3") ? conversationWithFriend1 : conversationWithFriend2;
+
+    const [conversations, setConversations] = useState<any[]>([]);
+    const [message, setMessage] =  useState('');
+    const [loading, setLoading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+    //const [text, setText] = useState('');
 
     const _ud = localStorage.getItem('user_data');
-
-    const ud = _ud ? JSON.parse(_ud) : { id: -1 };
+    const ud = _ud ? JSON.parse(_ud) : { id: null };
     const userId = ud._id || ud.id;
+
+    const displayName = state?.name || "Friend";
 
     useEffect(() => {
         if (!_ud) {
             navigate('/');
         }
         else{
-            setConversations(fakeMessages)
+            try {
+                loadConversations()
+            } catch (e){
+                console.log("loadConversations error: ", e);
+            } finally {
+                setConversations(conversation); //temp hard coded
+            }
+            //loadConversations(); //when api exists
         }
 
-    }, [navigate, _ud]);
+    }, [navigate, _ud, friendId, isSending]);
 
-    // async function loadConversations()
-    // {
-    //
-    //     const token = retrieveToken();
-    //     const obj = { userId: userId, jwtToken: token };
-    //     const js = JSON.stringify(obj);
-    //     if(!userId) return;
-    //
-    //     try {
-    //         const response = await fetch(buildPath(`api/conversations`), {
-    //             method: 'POST',
-    //             body: js,
-    //             headers: { 'Content-Type': 'application/json' }
-    //         });
-    //
-    //         const res = await response.json();
-    //
-    //         if (res.error && res.error.length > 0) {
-    //             setMessage("API Error: " + res.error);
-    //             return;
-    //         } else {
-    //             setConversations(res.conversations || []);
-    //         }
-    //
-    //         if (res.jwtToken) storeToken({accessToken: res.jwtToken});
-    //
-    //     } catch (error: any) {
-    //         console.error(error);
-    //         setMessage("Failed to load conversations." + error.toString());
-    //     }
-    // }
+    async function fetchConversationId() :Promise<string>{
+        //get onversation id where participants include user and friend id
 
-    //loadConversations();
+        return "some conversation id";
+    }
+
+    async function loadConversations()
+    {
+        setLoading(true);
+        try {
+            if(!userId) return;
+
+            const convId = fetchConversationId();
+            const token = retrieveToken();
+            const queryParams = new URLSearchParams({
+                    conversationId: convId.toString()
+            });
+
+            const response = await fetch(`${buildPath('api/messages')}?${queryParams}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const res = await response.json();
+
+            if (res.error && res.error.length > 0) {
+                setMessage("API Error: " + res.error);
+                return;
+            } else {
+                setConversations(res.conversations || []);
+            }
+
+            if (res.jwtToken) storeToken({accessToken: res.jwtToken});
+
+        } catch (error: any) {
+            console.error(error);
+            setMessage("Failed to load conversations." + error.toString());
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function sendMessage(): Promise<void> {
+        setIsSending(true);
+        setIsSending(false);
+        return;
+    }
+
 
     return (
         <div className={styles.conversationView}>
-            <div className={styles.conversationHeader}>
-                <h1 className={styles.messageReceiverName}>Bob</h1>
-                <div className={styles.todaysPrompt}>
-                    <p id={styles.promptHeader}>Today's Prompt</p>
-                    <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenience people?"</p>
+
+            {loading ? (
+                <div>
+                    <p>Loading...</p>
+                    <div>{message}</div>
                 </div>
-            </div>
+                ) : (
+                <>
+                <div className={styles.conversationHeader}>
+                    <h1 className={styles.messageReceiverName}>{displayName}</h1>
+                    <div className={styles.todaysPrompt}>
+                        <p id={styles.promptHeader}>Today's Prompt</p>
+                        <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenience people?"</p>
+                    </div>
+                </div>
 
-            <div className={styles.messages}>
-                {conversations.map((msg) => {
-                    const isMe = msg.senderId === userId;
-                    return (
-                        <div key={msg._id}
-                             className={`${styles.conversationMessage} ${isMe ? styles.sent : styles.received}`}>
-                            <p id={styles.conversationText}>{msg.text}</p>
-                            <span className={styles.conversationTimestamp}>
-                                {new Date(msg.createdAt).toLocaleTimeString()}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
+                <div className={styles.messages}>
+                    {conversations.map((msg) => {
+                        const isMe = msg.senderId === userId;
+                        return (
+                            <div key={msg._id}
+                                 className={`${styles.conversationMessage} ${isMe ? styles.sent : styles.received}`}>
+                                <p id={styles.conversationText}>{msg.text}</p>
+                                <span className={styles.conversationTimestamp}>
+                                    {new Date(msg.createdAt).toLocaleTimeString()}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
 
-            <div className={styles.messageInputWrapper}>
-                <input type="text" id={styles.messageInputText} placeholder="message" />
-                <button type="button" id={styles.messageInputButton}>Send</button>
-            </div>
+                <div className={styles.messageInputWrapper}>
+                    <input type="text" id={styles.messageInputText} placeholder="message" />
+                    <button type="button" id={styles.messageInputButton} onClick={sendMessage}>Send</button>
+                </div>
+                </>
+                )
+            }
+
         </div>
     );
 };

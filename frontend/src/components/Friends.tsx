@@ -22,7 +22,7 @@ function Friends() {
     const [totalPages, setTotalPages] = useState(1);
 
     const [loading, setLoading] = useState(false);
-    const [message,setMessage] = useState('');
+    const [message, setMessage] = useState('');
 
     const _ud = localStorage.getItem('user_data');
 
@@ -118,9 +118,14 @@ function Friends() {
         return cleanDate.replace(/-/g, "/");
     };
 
-    async function loadFriendProfile(friendId: string) {
-        console.log("opens chat with user" + friendId);
+    async function openChatWith(friend: Friend) {
+        navigate('/conversation/' + friend._id, {
+            state: {
+                name: `${friend.firstName} ${friend.lastName}`
+            }
+        });
     }
+
 
     return (
         <div className={styles.friendsList}>
@@ -157,7 +162,7 @@ function Friends() {
                         const displayName = `${friendData.firstName} ${friendData.lastName}`;
 
                         return (
-                            <div key={friendship._id} className={styles.friendCard} onClick={() => loadFriendProfile(friendship._id)}>
+                            <div key={friendship._id} className={styles.friendCard}>
                                 <div className={styles.userHandle}>@{friendData.username}</div>
 
                                 <div className={styles.friendInfo}>
@@ -166,7 +171,7 @@ function Friends() {
                                 </div>
 
                                 <div className={styles.actionArea}>
-                                    <button className={styles.viewBtn}>Open Chat</button>
+                                    <button className={styles.viewBtn} onClick={() => openChatWith(friendship)}>Open Chat</button>
                                 </div>
                             </div>
                         );
