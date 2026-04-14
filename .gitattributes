@@ -1,14 +1,14 @@
-# Ignore Flutter platform-specific code and build artifacts
-android/** linguist-generated
-ios/** linguist-generated
-windows/** linguist-generated
-linux/** linguist-generated
-macos/** linguist-generated
-build/** linguist-generated
-.dart_tool/** linguist-generated
+# Ignore all platform-specific boilerplate
+android/**/* linguist-generated
+ios/**/* linguist-generated
+windows/**/* linguist-generated
+linux/**/* linguist-generated
+macos/**/* linguist-generated
+build/**/* linguist-generated
+.dart_tool/**/* linguist-generated
 
-# Specifically ignore C-based build files that inflate C/C++ percentages
-CMakeLists.txt linguist-generated
-*.cmake linguist-generated
-*.vcxproj* linguist-generated
-*.sln linguist-generated
+# Specifically hide the C++ and build logic
+**/CMakeLists.txt linguist-generated
+**/*.cmake linguist-generated
+**/*.vcxproj* linguist-generated
+**/*.sln linguist-generated
