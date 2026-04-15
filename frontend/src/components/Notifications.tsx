@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import styles from '../pages/FriendsPage.module.css'
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -7,7 +8,6 @@ interface Notification {
   recipientId: string;
   type:
     | 'friend_request'
-    | 'message'
     | 'alert'
     | 'birthday'
     | 'support_received'
@@ -31,16 +31,6 @@ const mockNotifications: Notification[] = [
     isRead: false,
     relatedId: 'user2',
     senderName: 'John Doe'
-  },
-  {
-    _id: '2',
-    recipientId: 'user1',
-    type: 'message',
-    content: 'Hey, just checking in! How are you?',
-    createdAt: new Date(),
-    isRead: false,
-    relatedId: 'conv123',
-    senderName: 'Sarah'
   },
   {
     _id: '3',
@@ -89,7 +79,6 @@ const mockNotifications: Notification[] = [
 const notificationIcon = (type: Notification['type']): string => {
   switch (type) {
     case 'friend_request':          return '👤';
-    case 'message':                 return '💬';
     case 'birthday':                return '🎂';
     case 'alert':                   return '🤝';
     case 'support_received':        return '💙';
@@ -101,7 +90,6 @@ const notificationIcon = (type: Notification['type']): string => {
 const notificationLabel = (type: Notification['type'], senderName?: string): string => {
   switch (type) {
     case 'friend_request':          return `Friend request from ${senderName}`;
-    case 'message':                 return `New message from ${senderName}`;
     case 'birthday':                return `Send a birthday wish to ${senderName}`;
     case 'alert':                   return `Send support to ${senderName}`;
     case 'support_received':        return `Support message from ${senderName}`;
@@ -132,8 +120,6 @@ const ResponseModal: React.FC<ModalProps> = ({ notification, onClose, onSend }) 
 
   const header = `${notificationIcon(notification.type)} ${notificationLabel(notification.type, notification.senderName)}`;
 
-  //Send message API (birthday and support) 
-  //Adds the written message to the senders notification group
   const handleSend = async () => {
     if (!message.trim()) {
       setError('Please write a message first.');
@@ -154,20 +140,35 @@ const ResponseModal: React.FC<ModalProps> = ({ notification, onClose, onSend }) 
 
   return (
     <div id="modalOverlay" style={{
-      position: 'fixed', 
+      position: 'fixed',
       inset: 0,
       background: 'rgba(0,0,0,0.4)',
-      display: 'flex', 
-      justifyContent: 'center', 
+      display: 'flex',
+      justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000
     }}>
       <div id="modalCard" className="Modalcard">
         <p id="modalHeading" className="cardHeading">{header}</p>
 
-        <p id="modalSubtext" className="cardSubtext">
-          {notification.content || ''}
-        </p>
+        {isViewOnly(notification.type) && notification.content ? (
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '12px 14px',
+            margin: '12px 0',
+            fontSize: '14px',
+            lineHeight: '1.6',
+            color: '#111111'
+          }}>
+            {notification.content}
+          </div>
+        ) : (
+          <p id="modalSubtext" className="cardSubtext">
+            {notification.content || ''}
+          </p>
+        )}
 
         {!isViewOnly(notification.type) && (
           <div className="fieldGroup">
@@ -208,9 +209,18 @@ const ResponseModal: React.FC<ModalProps> = ({ notification, onClose, onSend }) 
 
 // ── Notification Card ─────────────────────────────────────────────────
 
-const NotificationCard: React.FC<{ notification: Notification; onClick: () => void }> = ({
+interface NotificationCardProps {
+  notification: Notification;
+  onClick: () => void;
+  onFriendAction?: (action: 'accept' | 'decline') => void;
+  friendResolved?: 'accept' | 'decline' | null;
+}
+
+const NotificationCard: React.FC<NotificationCardProps> = ({
   notification,
-  onClick
+  onClick,
+  onFriendAction,
+  friendResolved
 }) => (
   <div
     id={`notificationCard-${notification._id}`}
@@ -219,15 +229,46 @@ const NotificationCard: React.FC<{ notification: Notification; onClick: () => vo
     style={{ cursor: 'pointer', marginBottom: '6px' }}
   >
     <div className="fieldRow" style={{ alignItems: 'center' }}>
-      <div>
-        <p className="cardHeading" style={{ margin: 0 }}>
-            {notificationIcon(notification.type)} {notificationLabel(notification.type, notification.senderName)}
-          {!notification.isRead && (
-            <span style={{ color: '#3b82f6', marginLeft: '6px' }}>●</span>
-          )}
-        </p>
-      </div>
+      <p className="cardHeading" style={{ margin: 0 }}>
+        {notificationIcon(notification.type)} {notificationLabel(notification.type, notification.senderName)}
+        {!notification.isRead && (
+          <span style={{ color: '#3b82f6', marginLeft: '6px' }}>●</span>
+        )}
+      </p>
     </div>
+
+    {notification.type === 'friend_request' && !friendResolved && (
+      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+        <div className={styles.actionButtons}>
+            <button
+                className={styles.acceptBtn}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    //handleAccept(friendship._id);
+                }}
+            >Accept
+            </button>
+            <button
+                className={styles.rejectBtn}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    //handleReject(friendship._id);
+                }}
+            >Decline
+            </button>
+        </div>
+      </div>
+    )}
+
+    {notification.type === 'friend_request' && friendResolved && (
+      <p style={{
+        fontSize: '13px',
+        marginTop: '6px',
+        color: friendResolved === 'accept' ? 'green' : 'red'
+      }}>
+        {friendResolved === 'accept' ? 'Friend request accepted' : 'Friend request declined'}
+      </p>
+    )}
   </div>
 );
 
@@ -237,37 +278,39 @@ const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeNotification, setActiveNotification] = useState<Notification | null>(null);
+  const [friendActions, setFriendActions] = useState<Record<string, 'accept' | 'decline'>>({});
 
   useEffect(() => {
     fetchNotifications();
   }, []);
 
-  // API needed, fetch notifications
   const fetchNotifications = async () => {
     await new Promise(res => setTimeout(res, 500));
     setNotifications(mockNotifications);
     setLoading(false);
   };
 
-  // API needed, mark read
   const markAsRead = (id: string) => {
     setNotifications(prev =>
       prev.map(n => n._id === id ? { ...n, isRead: true } : n)
     );
   };
 
+  // API call for accept/decline goes here
+  const handleFriendAction = (id: string, action: 'accept' | 'decline') => {
+    markAsRead(id);
+    setFriendActions(prev => ({ ...prev, [id]: action }));
+  };
+
   const handleClick = (notification: Notification) => {
+    if (notification.type === 'friend_request') return;
     markAsRead(notification._id);
     if (isRespondable(notification.type) || isViewOnly(notification.type)) {
       setActiveNotification(notification);
       return;
     }
-    //Potential other locations to visit
     /*
     switch (notification.type) {
-      case 'friend_request':
-        window.location.href = `/friends?request=${notification.relatedId}`;
-        break;
       case 'message':
         window.location.href = `/messages?conversation=${notification.relatedId}`;
         break;
@@ -291,14 +334,21 @@ const Notifications: React.FC = () => {
         <p className="cardSubtext">Loading...</p>
       ) : notifications.length === 0 ? (
         <p className="cardSubtext">No notifications yet.</p>
-      ) : (
-        notifications.map(n => (
-          <NotificationCard
-            key={n._id}
-            notification={n}
-            onClick={() => handleClick(n)}
-          />
-        ))
+      )  : (
+        <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+          {notifications.map(n => (
+            <NotificationCard
+              key={n._id}
+              notification={n}
+              onClick={() => handleClick(n)}
+              onFriendAction={n.type === 'friend_request'
+                ? (action) => handleFriendAction(n._id, action)
+                : undefined
+              }
+              friendResolved={friendActions[n._id] ?? null}
+            />
+          ))}
+        </div>
       )}
 
       {activeNotification && (

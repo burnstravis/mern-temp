@@ -40,6 +40,7 @@ function App() {
             <Route path="/forgotPassword" element={<ForgotPasswordPage />} />
             <Route path="/resetPassword" element={<ResetPasswordPage />} />
             <Route element={<ProtectedRoute />}>
+                <Route path="/notifications" element={<NotificationPage />} />
                 <Route path="/cards" element={<CardPage />} />
                 <Route path="/conversation/:friendId" element={<ConversationPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
