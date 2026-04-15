@@ -400,4 +400,71 @@ exports.setApp = function (app, client) {
         return res.status(200).json(ret);
     });
 
+    app.post('/api/conversations', async (req, res) => {
+        const { friendId } = req.body; // The ID of the person you want to chat with
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        if (!friendId) {
+            return res.status(400).json({ error: 'Friend ID is required.' });
+        }
+
+        try {
+            // Standardize token
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7, jwtToken.length);
+            }
+
+            // Security: Check token validity
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const friendObjectId = new ObjectId(friendId);
+
+            const db = client.db('large_project');
+
+            // 1. Check if a conversation already exists between these two users
+            // We search for a doc where the 'participants' array contains BOTH IDs
+            const existingConversation = await db.collection('conversations').findOne({
+                participants: { $all: [userId, friendObjectId] }
+            });
+
+            if (existingConversation) {
+                const refreshed = tokenHandler.refresh(jwtToken);
+                return res.status(200).json({
+                    conversationId: existingConversation._id,
+                    accessToken: refreshed.accessToken,
+                    message: "Existing conversation retrieved"
+                });
+            }
+
+            // 2. If no conversation exists, create a new one
+            const newConversation = {
+                participants: [userId, friendObjectId],
+                lastMessage: "",
+                lastMessageAt: new Date(),
+                createdAt: new Date()
+            };
+
+            const result = await db.collection('conversations').insertOne(newConversation);
+            
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({
+                conversationId: result.insertedId,
+                accessToken: refreshed.accessToken,
+                message: "New conversation created"
+            });
+
+        } catch (e) {
+            console.error("Conversation Error:", e);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    });
+
 }
