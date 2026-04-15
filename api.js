@@ -449,10 +449,9 @@ exports.setApp = function (app, client) {
 
 
     app.post('/api/messages', async (req, res) => {
-        // Asks for the objectIDs for the two participants
         const { senderID, conversationID, message, jwtToken } = req.body;
 
-        if (!party1 || !party2 || !message || !jwtToken) {
+        if (!senderID || !conversationID || !message || !jwtToken) {
             return res.status(400).json({ error: 'party1, party2, message, and token are required.', accessToken: '' });
         }
 
@@ -477,6 +476,11 @@ exports.setApp = function (app, client) {
         }
     });
 
+
+    app.get('/api/messages/', async (req, res) => {
+        
+        const{}
+    });
 
 }
 
