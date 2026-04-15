@@ -35,11 +35,14 @@ const ForgotPassword: React.FC = () => {
 
     if (!validateForm()) return;
 
+    const obj = {email: email};
+    const js = JSON.stringify(obj);
+
     try {
-      const response = await fetch(buildPath('api/forgot-password'), {
+      const response = await fetch(buildPath('api/email-recovery'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: js,
+        headers: { 'Content-Type': 'application/json' }
       });
 
       const data: ForgotPasswordResponse = await response.json();
@@ -51,6 +54,8 @@ const ForgotPassword: React.FC = () => {
 
       // Always show a generic message so users can't probe for registered emails
       setSuccess('If an account exists, we sent a reset link to that email.');
+
+      setTimeout(() => { navigate('/resetPassword'); }, 1500);
       setEmail('');
 
     } catch {

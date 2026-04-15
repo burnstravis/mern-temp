@@ -108,15 +108,6 @@ const Register: React.FC = () => {
 
       setIsVerifying(true);
       setSuccess('Registration successfully. Please check your email for a code.');
-      // setFormData({
-      //   firstName: '',
-      //   lastName: '',
-      //   email: '',
-      //   username: '',
-      //   password: '',
-      //   confirmPassword: '',
-      //   birthday: ''
-      // });
 
     } catch {
       setError('Server error. Please try again later.');
