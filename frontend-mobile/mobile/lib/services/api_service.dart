@@ -1,33 +1,43 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:friend_connector_mobile/services/constants.dart';
+import 'package:friend_connector_mobile/services/token_manager.dart';
 
 class ApiService {
-  // Use 10.0.2.2 if on Android Emulator, localhost if on Linux/Web
-  static const String baseUrl = prodUrl;
+  static const String _baseUrl = localUrl;
+
+
+  /// Private helper to handle the "Sliding Session" logic
+  /// Automatically updates the stored JWT if the backend sends a fresh one
+  static Future<void> _updateSession(Map<String, dynamic> data) async {
+    // Check if accessToken exists AND isn't empty
+    if (data.containsKey('accessToken') &&
+        data['accessToken'] != null &&
+        data['accessToken'].toString().length > 10) {
+      await TokenManager.saveToken(data['accessToken']);
+    }
+  }
+
+  // --- AUTHENTICATION ---
 
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/login'),
+        Uri.parse('$_baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'login': username,
-          'password': password,
-        }),
+        body: jsonEncode({'login': username, 'password': password}),
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        return data;
-      } else {
-        return {'error': 'Server returned status ${response.statusCode}'};
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['accessToken'] != null) {
+        await TokenManager.saveToken(data['accessToken']);
       }
+      return data;
     } catch (e) {
-      return {'error': 'Connection failed.'};
+      return {'error': 'Connection failed: $e'};
     }
   }
-
 
   static Future<Map<String, dynamic>> register(
       String firstName,
@@ -35,11 +45,10 @@ class ApiService {
       String email,
       String username,
       String password,
-      String birthday
-      ) async {
+      String birthday) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
+        Uri.parse('$_baseUrl/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'firstName': firstName,
@@ -50,40 +59,95 @@ class ApiService {
           'birthday': birthday,
         }),
       );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
+  // --- FRIENDS & SOCIAL ---
+
+  static Future<Map<String, dynamic>> friendsList({
+    String search = "",
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final token = await TokenManager.getToken();
+
+      final Uri uri = Uri.parse('$_baseUrl/friends').replace(
+        queryParameters: {
+          'search': search,
+          'page': page.toString(),
+          'limit': limit.toString(),
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        await _updateSession(data);
+        return data;
       } else {
-
-        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
-        return {'error': errorResponse['error'] ?? 'Registration failed'};
+        return {'error': data['error'] ?? 'Failed to fetch friends'};
       }
     } catch (e) {
       return {'error': 'Connection failed: $e'};
     }
   }
 
-  static Future<Map<String, dynamic>> verifyEmail(
-      String email,
-      String code
-      ) async {
+  static Future<Map<String, dynamic>> addFriend(String username) async {
     try {
+      final token = await TokenManager.getToken();
+
       final response = await http.post(
-        Uri.parse('$baseUrl/verify-email'),
+        Uri.parse('$_baseUrl/add-friend'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'email': email,
-          'code': code
+          'username': username,
+          'jwtToken': token,
         }),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
+      final data = jsonDecode(response.body);
+      await _updateSession(data);
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
 
-        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
-        return {'error': errorResponse['error'] ?? 'Verification failed'};
-      }
+  // --- ACCOUNT RECOVERY & VERIFICATION ---
+
+  static Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/verify-email'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'code': code}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> emailRecovery(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/email-recovery'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      return jsonDecode(response.body);
     } catch (e) {
       return {'error': 'Connection failed: $e'};
     }
@@ -92,116 +156,22 @@ class ApiService {
   static Future<Map<String, dynamic>> resetPassword(
       String email,
       String verificationCode,
-      String newPassword,
-      String confirmpassword
-      ) async {
+      String password,
+      String confirmpassword) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/reset-password'),
+        Uri.parse('$_baseUrl/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
           'verificationCode': verificationCode,
-          'password': newPassword,
+          'password': password,
           'confirmpassword': confirmpassword
         }),
       );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-
-        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
-        return {'error': errorResponse['error'] ?? 'Reset Password failed'};
-      }
+      return jsonDecode(response.body);
     } catch (e) {
       return {'error': 'Connection failed: $e'};
     }
   }
-
-  static Future<Map<String, dynamic>> emailRecovery(
-      String email
-      ) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/email-recovery'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-
-        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
-        return {'error': errorResponse['error'] ?? 'Email Recovery failed'};
-      }
-    } catch (e) {
-      return {'error': 'Connection failed: $e'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> friendsList({
-      required String jwtToken,
-      String search = "",
-      int page = 1,
-      int limit = 10,
-    }) async {
-      try {
-        final Uri uri = Uri.parse('$baseUrl/api/friends').replace(
-          queryParameters: {
-            'search': search,
-            'page': page.toString(),
-            'limit': limit.toString(),
-          },
-        );
-
-        final response = await http.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $jwtToken',
-          },
-        );
-
-        final Map<String, dynamic> data = jsonDecode(response.body);
-
-        if (response.statusCode == 200) {
-          return data;
-        } else {
-          return {'error': data['error'] ?? 'Failed to fetch friends'};
-        }
-      } catch (e) {
-        return {'error': 'Connection failed: $e'};
-      }
-    }
-
-  static Future<Map<String, dynamic>> addFriend(
-      String username,
-      String jwtToken,
-      ) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/add-friend'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'jwtToken': jwtToken,
-        }),
-      );
-
-      final Map<String, dynamic> data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        return data;
-      } else {
-        return {'error': 'Server error ${response.statusCode}'};
-      }
-    } catch (e) {
-      return {'error': 'Connection failed: $e'};
-    }
-  }
-
 }

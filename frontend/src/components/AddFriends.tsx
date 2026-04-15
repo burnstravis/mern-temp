@@ -40,16 +40,17 @@ function AddFriends() {
             navigate('/');
         }
         else{
-            fetchUsers()
+            fetchUsers(searchText)
         }
 
     }, [navigate, _ud, searchText]);
 
 
 
-    async function fetchUsers() {
+    async function fetchUsers(searchText: string) {
         try{
             setUsers(fakeUsers)
+            console.log(searchText);
         }
         catch(e){
             setMessage('Unable to fetch users: ' + e);
@@ -77,6 +78,7 @@ function AddFriends() {
             });
 
             const res = await response.json();
+            console.log(res);
 
             if (res.error && res.error.length > 0) {
                 setMessage(res.error);
@@ -98,6 +100,10 @@ function AddFriends() {
         user.username.toLowerCase().includes(searchText.toLowerCase())
     );
 
+    const handleSearch = () => {
+        fetchUsers(searchText)
+    };
+
 
     return (
         <div className={styles.addFriendsComponent}>
@@ -115,6 +121,8 @@ function AddFriends() {
                         autoFocus={true}
                         autoComplete="off"
                     />
+
+                    <button id={styles.searchButton} type="button" onClick={handleSearch}>Find</button>
                 </div>
 
                 <div className={styles.listUsersContainer}>

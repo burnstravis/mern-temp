@@ -1,6 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:friend_connector_mobile/screens/discoverfriends_page.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'messages_page.dart';
+import 'friends_page.dart';
+import 'conversation_page.dart';
 
 class HomePage extends StatefulWidget {
   final String firstName;
@@ -12,6 +17,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  int _lastIndex = 0; // TRACK PREVIOUS TAB
+
+  String? _activeFriendId;
+  String? _activeFriendName;
 
   static const Color homeWrapperBg = Color(0xFFA89FD8);
   static const Color homeWrapperBorder = Color(0xFF7B6FC4);
@@ -111,7 +120,10 @@ class _HomePageState extends State<HomePage> {
   Widget _buildNavItem(int index, IconData icon, String label) {
     bool isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () => setState(() {
+        _lastIndex = _selectedIndex; // Save current before changing
+        _selectedIndex = index;
+      }),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: MediaQuery.of(context).size.width / 7, // Ensure even distribution
@@ -153,14 +165,46 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+
+
   Widget _buildPage(int index) {
     switch (index) {
       case 0: return _buildHomeView();
-      case 1: return const Center(child: Text("Messages", style: TextStyle(color: Colors.white)));
-      case 2: return const Center(child: Text("Friends", style: TextStyle(color: Colors.white)));
-      case 3: return const Center(child: Text("Discover", style: TextStyle(color: Colors.white)));
-      case 4: return const Center(child: Text("Notifications", style: TextStyle(color: Colors.white)));
+      case 1:
+        return MessagesPage(
+          onOpenChat: (id, name) {
+            setState(() {
+              _activeFriendId = id;
+              _activeFriendName = name;
+              _lastIndex = 1; // Mark that we came from Messages
+              _selectedIndex = 6;
+            });
+          },
+        );
+      case 2:
+        return FriendsPage(
+          onOpenChat: (id, name) {
+            setState(() {
+              _activeFriendId = id;
+              _activeFriendName = name;
+              _lastIndex = 2; // Mark that we came from Friends
+              _selectedIndex = 6;
+            });
+          },
+        );
+      case 3: return DiscoverPage();
+      case 4: return const Center(child: Text("Notifications"));
       case 5: return _buildSettingsView();
+      case 6:
+        return ConversationPage(
+          friendId: _activeFriendId ?? "",
+          displayName: _activeFriendName ?? "Friend",
+          onBack: () {
+            setState(() {
+              _selectedIndex = _lastIndex; // RETURN TO SAVED PREVIOUS TAB
+            });
+          },
+        );
       default: return _buildHomeView();
     }
   }
