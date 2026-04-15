@@ -38,8 +38,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgotPassword" element={<ForgotPasswordPage />} />
             <Route path="/resetPassword" element={<ResetPasswordPage />} />
-            <Route path="/notifications" element={<NotificationPage />} />
             <Route element={<ProtectedRoute />}>
+                <Route path="/notifications" element={<NotificationPage />} />
                 <Route path="/cards" element={<CardPage />} />
                 <Route path="/conversation" element={<ConversationPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
