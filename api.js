@@ -324,9 +324,10 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.post('/api/add-friend', async (req, res,) =>
+    app.post('/api/friends', async (req, res,) =>
     {
-        const { username, jwtToken } = req.body;
+        const username = req.body;
+        let jwtToken = req.headers['authorization']; 
 
         if (!username || !jwtToken) {
             return res.status(400).json({ error: 'Username and token are required.', accessToken: '' });
