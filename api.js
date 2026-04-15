@@ -468,4 +468,98 @@ exports.setApp = function (app, client) {
         }
     });
 
+    app.get('/api/conversations', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        try {
+            // 1. Standardize and Verify Token
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7, jwtToken.length);
+            }
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const db = client.db('large_project');
+
+            // 2. Fetch Conversations
+            // We find any conversation where this user is a participant
+            // and sort by the most recent message activity
+            const conversations = await db.collection('conversations')
+                .find({ participants: userId })
+                .sort({ lastMessageAt: -1 }) 
+                .toArray();
+
+            // 3. Optional: Get Friend Info (Optimization)
+            // Currently, your schema only has IDs. To show names in the inbox,
+            // we'd typically "join" the user data here or fetch it in React.
+            // For now, let's return the raw list.
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            res.status(200).json({
+                conversations: conversations,
+                accessToken: refreshed.accessToken
+            });
+
+        } catch (e) {
+            console.error("Get Conversations Error:", e);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    });
+    
+    app.get('/api/conversations', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        try {
+            // 1. Standardize and Verify Token
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7, jwtToken.length);
+            }
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const db = client.db('large_project');
+
+            // 2. Fetch Conversations
+            // We find any conversation where this user is a participant
+            // and sort by the most recent message activity
+            const conversations = await db.collection('conversations')
+                .find({ participants: userId })
+                .sort({ lastMessageAt: -1 }) 
+                .toArray();
+
+            // 3. Optional: Get Friend Info (Optimization)
+            // Currently, your schema only has IDs. To show names in the inbox,
+            // we'd typically "join" the user data here or fetch it in React.
+            // For now, let's return the raw list.
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            res.status(200).json({
+                conversations: conversations,
+                accessToken: refreshed.accessToken
+            });
+
+        } catch (e) {
+            console.error("Get Conversations Error:", e);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    });
+
 }
