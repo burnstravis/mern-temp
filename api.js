@@ -401,4 +401,49 @@ exports.setApp = function (app, client) {
         return res.status(200).json(ret);
     });
 
+    app.post('/api/accept-friend-request', async (req, res) => {
+    const { friendship_id, jwtToken } = req.body;  
+
+    if (!friendship_id || !jwtToken) {
+        return res.status(400).json({ error: 'Friendship ID and token are required.', accessToken: '' });
+    }
+
+    const db = client.db('large_project');
+    let ret;
+
+    try {
+        if (tokenHandler.isExpired(jwtToken)) {
+            ret = { error: 'The JWT is no longer valid', accessToken: '' };
+            return res.status(200).json(ret);
+        }
+
+        const decoded = require('jsonwebtoken').decode(jwtToken);
+        const userId = decoded?.id;
+
+        if (!userId) {
+            ret = { error: 'Invalid token payload.', accessToken: '' };
+            return res.status(200).json(ret);
+        }
+
+        const userObjectId = new ObjectId(userId);
+
+        await db.collection('friendships').updateOne(
+            { _id: new ObjectId(friendship_id), recepientid: userObjectId, status: 'pending' },
+            { $set: { status: 'accepted' } }
+        );
+
+        const refreshed = tokenHandler.refresh(jwtToken);
+
+        ret = {
+            error: '',
+            message: 'Friend request accepted.',
+            accessToken: refreshed.accessToken
+        };
+    } catch (e) {
+        ret = { error: e.toString(), accessToken: '' };
+    }
+
+    return res.status(200).json(ret);
+});
+
 }
