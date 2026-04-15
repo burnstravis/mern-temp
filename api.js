@@ -401,4 +401,35 @@ exports.setApp = function (app, client) {
         return res.status(200).json(ret);
     });
 
+
+    app.post('/api/messages', async (req, res) => {
+        // Asks for the objectIDs for the two participants
+        const { party1, party2, message, jwtToken } = req.body;
+
+        if (!party1 || !party2 || !message || !jwtToken) {
+            return res.status(400).json({ error: 'party1, party2, message, and token are required.', accessToken: '' });
+        }
+
+        try {
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+            }
+
+            const db = client.db('large_project');
+
+            await db.collection('messages').insertOne({
+                participants: [new ObjectId(party1), new ObjectId(party2)],
+                message: message,
+                createdAt: new Date()
+            });
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({ error: '', accessToken: refreshed.accessToken });
+        } catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
+    });
 }
+
+
+
