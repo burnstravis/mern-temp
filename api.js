@@ -514,7 +514,7 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: "Internal server error" });
         }
     });
-    
+
     app.get('/api/conversations', async (req, res) => {
         let jwtToken = req.headers['authorization'];
 
@@ -559,6 +559,86 @@ exports.setApp = function (app, client) {
         } catch (e) {
             console.error("Get Conversations Error:", e);
             res.status(500).json({ error: "Internal server error" });
+        }
+    });
+
+    app.post('/api/support-requests', async (req, res) => {
+        const { content, type } = req.body;
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) return res.status(401).json({ error: "No token provided." });
+
+        // Strict one-word validation
+        const validTypes = ["Encouragement", "Advice", "Chat", "Celebrate"];
+
+        if (!content || !type) {
+            return res.status(400).json({ error: "Content and type are required." });
+        }
+
+        if (!validTypes.includes(type)) {
+            return res.status(400).json({ error: "Invalid type. Must be: Encouragement, Advice, Chat, or Celebrate." });
+        }
+
+        try {
+            if (jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
+            if (tokenHandler.isExpired(jwtToken)) return res.status(401).json({ error: "Token expired." });
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const db = client.db('large_project');
+
+            const now = new Date();
+            const expiresAt = new Date(now.getTime() + (24 * 60 * 60 * 1000)); 
+
+            const newRequest = {
+                userId: userId,
+                content: content,
+                type: type, 
+                createdAt: now,
+                expiresAt: expiresAt
+            };
+
+            const result = await db.collection('support_requests').insertOne(newRequest);
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            res.status(200).json({
+                requestId: result.insertedId,
+                accessToken: refreshed.accessToken
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
+
+    app.get('/api/support-requests', async (req, res) => {
+        const typeFilter = req.query.type; 
+        let jwtToken = req.headers['authorization'];
+
+        try {
+            if (jwtToken && jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
+            
+            const db = client.db('large_project');
+            const now = new Date();
+
+            let query = { expiresAt: { $gt: now } };
+            
+            if (typeFilter) {
+                query.type = typeFilter;
+            }
+
+            const activeRequests = await db.collection('support_requests')
+                .find(query)
+                .sort({ createdAt: -1 })
+                .toArray();
+
+            const accessToken = jwtToken ? tokenHandler.refresh(jwtToken).accessToken : '';
+
+            res.status(200).json({
+                requests: activeRequests,
+                accessToken: accessToken
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
         }
     });
 
