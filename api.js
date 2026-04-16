@@ -452,7 +452,7 @@ exports.setApp = function (app, client) {
         const { senderID, conversationID, message, jwtToken } = req.body;
 
         if (!senderID || !conversationID || !message || !jwtToken) {
-            return res.status(400).json({ error: 'party1, party2, message, and token are required.', accessToken: '' });
+            return res.status(400).json({ error: 'senderID, conversationID, message, and token are required.', accessToken: '' });
         }
 
         try {
@@ -477,9 +477,40 @@ exports.setApp = function (app, client) {
     });
 
 
-    app.get('/api/messages/', async (req, res) => {
+    app.get('/api/read-messages', async (req, res) => {
         
-        const{}
+        const { senderID, conversationID, jwtToken } = req.body;
+
+        if (!senderID || !conversationID|| !jwtToken) {
+            return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
+        }
+
+
+        try{
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+            }
+
+            const db = client.db('large_project');
+
+            const senderObjectId = new ObjectId(senderID);
+
+            const messages = await db.collection('messages')
+                .find({ conversationid: conversationID })
+                .sort({ createdAt: 1 })
+                .toArray();
+
+            const taggedMessages = messages.map(msg => ({
+                ...msg,
+                fromSender: msg.senderid.equals(senderObjectId)
+            }));
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({ error: '', messages: taggedMessages, accessToken: refreshed.accessToken });
+        }
+        catch (e){
+            res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
     });
 
 }
