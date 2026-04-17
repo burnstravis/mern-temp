@@ -398,7 +398,7 @@ exports.setApp = function (app, client) {
 
     app.post('/api/friends', async (req, res,) =>
     {
-        const username = req.body;
+        const { username } = req.body;
         let jwtToken = req.headers['authorization']; 
 
         if (!username || !jwtToken) {
@@ -424,11 +424,11 @@ exports.setApp = function (app, client) {
 
             const recipient = await db.collection('users').findOne({
                 username: username,
-                // verified: true
+                verified: true
             });
 
             if (!recipient) {
-                ret = { error: 'User not found.', accessToken: '' };
+                ret = { error: 'User not found.', accessToken: ''};
                 return res.status(200).json(ret);
             }
 
@@ -454,8 +454,8 @@ exports.setApp = function (app, client) {
             }
 
             await db.collection('friendships').insertOne({
-                requesterid: requesterObjectId,
-                recepientid: recipientObjectId,
+                requesterId: requesterObjectId,
+                recipientId: recipientObjectId,
                 status: 'pending'
             });
 
