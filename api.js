@@ -398,7 +398,7 @@ exports.setApp = function (app, client) {
 
     app.post('/api/friends', async (req, res,) =>
     {
-        const username = req.body;
+        const { username } = req.body;
         let jwtToken = req.headers['authorization']; 
 
         if (!username || !jwtToken) {
@@ -428,7 +428,7 @@ exports.setApp = function (app, client) {
             });
 
             if (!recipient) {
-                ret = { error: 'User not found.', accessToken: '' };
+                ret = { error: 'User not found.', accessToken: ''};
                 return res.status(200).json(ret);
             }
 
@@ -454,8 +454,8 @@ exports.setApp = function (app, client) {
             }
 
             await db.collection('friendships').insertOne({
-                requesterid: requesterObjectId,
-                recepientid: recipientObjectId,
+                requesterId: requesterObjectId,
+                recipientId: recipientObjectId,
                 status: 'pending'
             });
 
@@ -581,10 +581,14 @@ exports.setApp = function (app, client) {
                 .sort({ createdAt: 1 })
                 .toArray();
 
-            const taggedMessages = messages.map(msg => ({
-                ...msg,
-                fromSender: msg.senderid.equals(senderObjectId)
-            }));
+            const taggedMessages = messages.map(msg => {
+                // 1. Get the sender ID from the message (checking both common casings)
+                const msgSender = msg.senderID;
+                return {
+                    ...msg,
+                    fromSender: msgSender ? msgSender.toString() === senderObjectId.toString() : false
+                    };
+            });
 
             const refreshed = tokenHandler.refresh(jwtToken);
             res.status(200).json({ error: '', messages: taggedMessages, accessToken: refreshed.accessToken });
@@ -594,7 +598,7 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.post('api/notifications', async (req, res) => {
+    app.post('/api/notifications', async (req, res) => {
 
         let jwtToken = req.headers['authorization'];
 
@@ -618,14 +622,14 @@ exports.setApp = function (app, client) {
                 return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
             }
 
-            await db.collection('notifications').insertOne({
-                recepientid: new ObjectId(recepientId),
-                type: type,
-                content: content,
-                createdAt: new Date(),
-                isRead: false,
-                relatedId: relatedId ? new ObjectId(relatedId) : null
-            });
+        await db.collection('notifications').insertOne({
+            recipientid: new ObjectId(recepientId),
+            type: type,
+            content: content,
+            createdAt: new Date(),
+            isRead: false,
+            relatedId: relatedId ? new ObjectId(relatedId) : null
+        });
 
             const refreshed = tokenHandler.refresh(jwtToken);
             res.status(200).json({ error: '', accessToken: refreshed.accessToken });
