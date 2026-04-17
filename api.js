@@ -337,13 +337,13 @@ exports.setApp = function (app, client) {
             // to hide pending requests from this list.
             const friendshipDocs = await db.collection('friendships')
                 .find({ 
-                    $or: [{ requesterid: requesterId }, { recepientid: requesterId }]
+                    $or: [{ requesterId: requesterId }, { recipientId: requesterId }]
                 })
                 .toArray();
 
             // 4. Map to get the ID of the *other* person in each document
             const friendIds = friendshipDocs.map(f => 
-                f.requesterid.equals(requesterId) ? f.recepientid : f.requesterid
+                f.requesterId.equals(requesterId) ? f.recipientId : f.requesterId
             );
             
             // Refresh token to keep the sliding session alive
@@ -442,8 +442,8 @@ exports.setApp = function (app, client) {
 
             const existing = await db.collection('friendships').findOne({
                 $or: [
-                    { requesterid: requesterObjectId, recepientid: recipientObjectId },
-                    { requesterid: recipientObjectId, recepientid: requesterObjectId }
+                    { requesterId: requesterObjectId, recipientId: recipientObjectId },
+                    { requesterId: recipientObjectId, recipientId: requesterObjectId }
                 ],
                 status: { $in: ['pending', 'accepted'] }
             });
@@ -457,6 +457,16 @@ exports.setApp = function (app, client) {
                 requesterId: requesterObjectId,
                 recipientId: recipientObjectId,
                 status: 'pending'
+            });
+
+            // Notification: Send to recipient
+            await db.collection('notifications').insertOne({
+                recipientid: recipientObjectId,
+                type: 'friend_request',
+                content: `${requesterFirstName} sent you a friend request.`,
+                createdAt: new Date(),
+                isRead: false,
+                relatedId: friendshipResult.insertedId
             });
 
             const refreshed = tokenHandler.refresh(jwtToken);
@@ -478,9 +488,9 @@ exports.setApp = function (app, client) {
         
         let jwtToken = req.headers['authorization'];
         
-        const { friendship_id } = req.body;  
+        const { friendshipId } = req.body;  
 
-        if (!friendship_id || !jwtToken) {
+        if (!friendshipId || !jwtToken) {
             return res.status(400).json({ error: 'Friendship ID and token are required.', accessToken: '' });
         }
 
@@ -495,6 +505,7 @@ exports.setApp = function (app, client) {
 
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const userId = decoded?.id;
+            const userFirstName = decoded?.firstName || "Someone";
 
             if (!userId) {
                 ret = { error: 'Invalid token payload.', accessToken: '' };
@@ -502,11 +513,32 @@ exports.setApp = function (app, client) {
             }
 
             const userObjectId = new ObjectId(userId);
+            const friendshipObjectId = new ObjectId(friendship_id);
+
+            const friendship = await db.collection('friendships').findOne({ 
+                _id: friendshipObjectId, 
+                recipientId: userObjectId, 
+                status: 'pending' 
+            });
+
+            if (!friendship) {
+                return res.status(400).json({ error: 'Friend request not found or already accepted.', accessToken: '' });
+            }
 
             await db.collection('friendships').updateOne(
-                { _id: new ObjectId(friendship_id), recepientid: userObjectId, status: 'pending' },
+                { _id: friendshipObjectId },
                 { $set: { status: 'accepted' } }
             );
+
+            // Notification: Send to the original requester
+            await db.collection('notifications').insertOne({
+                recipientId: friendship.requesterId,
+                type: 'friend_accepted',
+                content: `${userFirstName} accepted your friend request!`,
+                createdAt: new Date(),
+                isRead: false,
+                relatedId: friendshipObjectId
+            });
 
             const refreshed = tokenHandler.refresh(jwtToken);
 
@@ -540,13 +572,38 @@ exports.setApp = function (app, client) {
             }
 
             const db = client.db('large_project');
+            const senderObjectId = new ObjectId(senderID);
+            const conversationObjectId = new ObjectId(conversationID);
 
             await db.collection('messages').insertOne({
-                conversationid: conversationID,
-                senderid: senderID,
+                conversationId: conversationID,
+                senderId: senderID,
                 text: message,
                 createdAt: new Date()
             });
+
+            // Update conversation "last activity"
+            await db.collection('conversations').updateOne(
+                { _id: conversationObjectId },
+                { $set: { lastMessage: message, lastMessageAt: new Date() } }
+            );
+
+            // Notification: Find the other participant to notify
+            const convo = await db.collection('conversations').findOne({ _id: conversationObjectId });
+            if (convo) {
+                const recipientId = convo.participants.find(p => p.toString() !== senderObjectId.toString());
+                if (recipientId) {
+                    const sender = await db.collection('users').findOne({ _id: senderObjectId });
+                    await db.collection('notifications').insertOne({
+                        recipientId: recipientId,
+                        type: 'new_message',
+                        content: `New message from ${sender?.firstName || 'Friend'}: "${message.substring(0, 20)}..."`,
+                        createdAt: new Date(),
+                        isRead: false,
+                        relatedId: conversationObjectId
+                    });
+                }
+            }
 
             const refreshed = tokenHandler.refresh(jwtToken);
             res.status(200).json({ error: '', accessToken: refreshed.accessToken });
@@ -577,13 +634,13 @@ exports.setApp = function (app, client) {
             const senderObjectId = new ObjectId(senderID);
 
             const messages = await db.collection('messages')
-                .find({ conversationid: conversationID })
+                .find({ conversationId: conversationID })
                 .sort({ createdAt: 1 })
                 .toArray();
 
             const taggedMessages = messages.map(msg => {
                 // 1. Get the sender ID from the message (checking both common casings)
-                const msgSender = msg.senderID;
+                const msgSender = msg.senderId;
                 return {
                     ...msg,
                     fromSender: msgSender ? msgSender.toString() === senderObjectId.toString() : false
@@ -637,6 +694,52 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
+
+   app.get('/api/notifications', async (req, res) => {
+    let jwtToken = req.headers['authorization'];
+
+    if (!jwtToken) {
+        return res.status(400).json({ error: 'Token is required.', accessToken: '' });
+    }
+
+    try {
+        if (jwtToken.startsWith('Bearer ')) {
+            jwtToken = jwtToken.slice(7);
+        }
+
+        if (tokenHandler.isExpired(jwtToken)) {
+            return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+        }
+
+        const db = client.db('large_project');
+        const decoded = require('jsonwebtoken').decode(jwtToken);
+        const userId = decoded?.id;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
+        }
+
+        const userObjectId = new ObjectId(userId);
+
+        // 1. Fetch all notifications for this user (sorted by newest first)
+        const notifications = await db.collection('notifications')
+            .find({ recipientId: userObjectId }) // Use recipientId if you standardized to camelCase
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        const refreshed = tokenHandler.refresh(jwtToken);
+
+        res.status(200).json({ 
+            error: '', 
+            notifications: notifications, 
+            accessToken: refreshed.accessToken 
+        });
+    } catch (e) {
+        console.error("Fetch Notifications Error:", e);
+        res.status(500).json({ error: e.toString(), accessToken: '' });
+    }
+});
+
     app.get('/api/return-random-prompt', async (req, res) => {
         try {
             const db = client.db('large_project');
@@ -792,6 +895,7 @@ exports.setApp = function (app, client) {
 
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const userId = new ObjectId(decoded.id);
+            const userFirstName = decoded?.firstName || "A friend";
             const db = client.db('large_project');
 
             const now = new Date();
@@ -806,6 +910,28 @@ exports.setApp = function (app, client) {
             };
 
             const result = await db.collection('support_requests').insertOne(newRequest);
+
+            // Notification: Send to all friends of the user
+            const friendships = await db.collection('friendships').find({
+                $or: [{ requesterId: userId }, { recipientId: userId }],
+                status: 'accepted'
+            }).toArray();
+
+            if (friendships.length > 0) {
+                const friendNotifications = friendships.map(f => {
+                    const friendId = f.requesterId.equals(userId) ? f.recipientId : f.requesterId;
+                    return {
+                        recipientId: friendId,
+                        type: 'support_needed',
+                        content: `${userFirstName} needs some ${type}!`,
+                        createdAt: new Date(),
+                        isRead: false,
+                        relatedId: result.insertedId
+                    };
+                });
+                await db.collection('notifications').insertMany(friendNotifications);
+            }
+            
             const refreshed = tokenHandler.refresh(jwtToken);
 
             res.status(200).json({
