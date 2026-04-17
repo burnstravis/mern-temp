@@ -122,12 +122,47 @@ function Friends() {
     };
 
     async function openChatWith(friend: Friend) {
-        navigate('/conversation/' + friend._id, {
-            state: {
-                name: `${friend.firstName} ${friend.lastName}`
+        setLoading(true); // Optional: show a spinner while initializing
+        try {
+            const token = retrieveToken();
+            const response = await fetch(buildPath('api/conversations'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ friendId: friend._id })
+            });
+
+            const res = await response.json();
+
+            if (res.error) {
+                setMessage("Could not open chat: " + res.error);
+                return;
             }
-        });
+
+            // Store refreshed token if returned
+            if (res.accessToken) {
+                storeToken(res.accessToken);
+            }
+
+            // Navigate to the conversation page using the ID of the friend
+            // Your Conversation page will use this friendId to fetch messages
+            navigate('/conversation/' + friend._id, {
+                state: {
+                    name: `${friend.firstName} ${friend.lastName}`,
+                    conversationId: res.conversationId // Passing this via state saves an API call on the next page
+                }
+            });
+
+        } catch (e) {
+            console.error(e);
+            setMessage("Error connecting to chat service.");
+        } finally {
+            setLoading(false);
+        }
     }
+
 
 
     return (

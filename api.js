@@ -516,9 +516,8 @@ exports.setApp = function (app, client) {
         }
 
         try {
-            // 1. Standardize and Verify Token
             if (jwtToken.startsWith('Bearer ')) {
-                jwtToken = jwtToken.slice(7, jwtToken.length);
+                jwtToken = jwtToken.slice(7);
             }
 
             if (tokenHandler.isExpired(jwtToken)) {
@@ -529,11 +528,61 @@ exports.setApp = function (app, client) {
             const userId = new ObjectId(decoded.id);
             const db = client.db('large_project');
 
-            const conversations = await db.collection('conversations')
-                .find({ participants: userId })
-                .sort({ lastMessageAt: -1 })
-                .toArray();
-
+            // Use aggregation to join conversation data with user data
+            const conversations = await db.collection('conversations').aggregate([
+                {
+                    // 1. Find conversations where the current user is a participant
+                    $match: { participants: userId }
+                },
+                {
+                    // 2. Join with the Users collection
+                    $lookup: {
+                        from: 'users',           // Your users collection name
+                        localField: 'participants',
+                        foreignField: '_id',
+                        as: 'participantDetails'
+                    }
+                },
+                // ... inside your aggregate array ...
+                {
+                    // 3. Shape the data for the frontend
+                    $project: {
+                        _id: 1,
+                        lastMessage: 1,
+                        lastMessageAt: 1,
+                        participants: 1,
+                        // Instead of the whole user object, just take specific fields
+                        otherUser: {
+                            $let: {
+                                vars: {
+                                    match: {
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input: "$participantDetails",
+                                                    as: "p",
+                                                    cond: { $ne: ["$$p._id", userId] }
+                                                }
+                                            }, 0
+                                        ]
+                                    }
+                                },
+                                in: {
+                                    // ONLY include safe fields here
+                                    firstName: "$$match.firstName",
+                                    lastName: "$$match.lastName",
+                                    username: "$$match.username"
+                                }
+                            }
+                        }
+                    }
+                },
+// ... sort and toArray ...
+                {
+                    // 5. Sort by most recent message
+                    $sort: { lastMessageAt: -1 }
+                }
+            ]).toArray();
 
             const refreshed = tokenHandler.refresh(jwtToken);
 
@@ -680,6 +729,93 @@ exports.setApp = function (app, client) {
         }
     });
 
+    app.post('/api/messages', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+        const { senderID, conversationID, message } = req.body;
+
+        if (!senderID || !conversationID || !message || !jwtToken) {
+            return res.status(400).json({ error: 'Missing fields', accessToken: '' });
+        }
+
+        try {
+            const token = jwtToken.startsWith('Bearer ') ? jwtToken.slice(7) : jwtToken;
+
+            if (tokenHandler.isExpired(token)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+            }
+
+            const db = client.db('large_project');
+
+            // 1. Insert the message
+            await db.collection('messages').insertOne({
+                conversationid: conversationID, // Saving as string for easy GET filtering
+                senderid: senderID,
+                text: message,
+                createdAt: new Date()
+            });
+
+            // 2. IMPORTANT: Update the conversation record for the "Messages" list
+            await db.collection('conversations').updateOne(
+                { _id: new ObjectId(conversationID) },
+                {
+                    $set: {
+                        lastMessage: message,
+                        lastMessageAt: new Date()
+                    }
+                }
+            );
+
+            const refreshed = tokenHandler.refresh(token);
+            res.status(200).json({ error: '', accessToken: refreshed.accessToken });
+        } catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
+    });
+
+
+    app.get('/api/messages', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+
+        // CHANGE: Use req.query instead of req.body
+        const { senderID, conversationID } = req.query;
+
+        if (!senderID || !conversationID || !jwtToken) {
+            return res.status(400).json({ error: 'senderID and conversationID are required.' });
+        }
+
+        try {
+            // CLEANUP: Strip "Bearer " if present
+            const token = jwtToken.startsWith('Bearer ') ? jwtToken.slice(7) : jwtToken;
+
+            if (tokenHandler.isExpired(token)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+            }
+
+            const db = client.db('large_project');
+
+            // Query messages by the conversation ID
+            const messages = await db.collection('messages')
+                .find({ conversationid: conversationID }) // Use the ID string
+                .sort({ createdAt: 1 })
+                .toArray();
+
+            // Tag messages so frontend knows which side of the bubble to show
+            const taggedMessages = messages.map(msg => ({
+                ...msg,
+                // Compare as strings to be safe
+                fromSender: msg.senderid.toString() === senderID.toString()
+            }));
+
+            const refreshed = tokenHandler.refresh(token);
+            res.status(200).json({
+                error: '',
+                messages: taggedMessages,
+                accessToken: refreshed.accessToken
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
+    });
 
     //send message
     app.post('/api/notifications', async (req, res) => {
@@ -720,7 +856,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-    //get chat messages
     app.get('/api/notifications', async (req, res) => {
         let jwtToken = req.headers['authorization'];
         if (!jwtToken) return res.status(401).json({ error: 'No token provided.' });

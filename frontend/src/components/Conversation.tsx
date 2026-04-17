@@ -1,196 +1,185 @@
 import { buildPath } from './path';
-import {retrieveToken, storeToken} from '../tokenStorage';
-import  {useEffect, useState} from 'react';
+import { retrieveToken, storeToken } from '../tokenStorage';
+import {useEffect, useRef, useState} from 'react';
 import styles from '../pages/ConversationsPage.module.css'
-import {useLocation, useNavigate, useParams} from "react-router-dom";
-
-const conversationWithFriend1 = [
-    {
-        _id: "m101",
-        conversationId: "conv_alpha",
-        senderId: "69d4944bdc68a7a71ca1c6e3", // Them
-        text: "Did you finish that report yet?",
-        createdAt: "2026-04-13T10:00:00Z"
-    },
-    {
-        _id: "m102",
-        conversationId: "conv_alpha",
-        senderId: "69d48e049063fbc48903272f", // Me
-        text: "Almost! Just need to fix the charts. Why, you heading out early?",
-        createdAt: "2026-04-13T10:05:00Z"
-    },
-    {
-        _id: "m103",
-        conversationId: "conv_alpha",
-        senderId: "69d4944bdc68a7a71ca1c6e3", // Them
-        text: "Yeah, thinking of hitting that new taco spot. Interested?",
-        createdAt: "2026-04-13T10:06:20Z"
-    },
-    {
-        _id: "m104",
-        conversationId: "conv_alpha",
-        senderId: "69d48e049063fbc48903272f", // Me
-        text: "Tacos? Say no more. I'll be done in 20.",
-        createdAt: "2026-04-13T10:07:45Z"
-    }
-];
-
-const conversationWithFriend2 = [
-    {
-        _id: "m201",
-        conversationId: "conv_beta",
-        senderId: "69d48e049063fbc48903272f", // Me
-        text: "Saw today's prompt. I'd definitely just hide people's car keys 5 minutes before they leave.",
-        createdAt: "2026-04-14T08:30:00Z"
-    },
-    {
-        _id: "m202",
-        conversationId: "conv_beta",
-        senderId: "69dc31b1435eea372fed382c", // Them
-        text: "That is evil. I'd just slightly unscrew every lightbulb in the house.",
-        createdAt: "2026-04-14T08:32:15Z"
-    },
-    {
-        _id: "m203",
-        conversationId: "conv_beta",
-        senderId: "69d48e049063fbc48903272f", // Me
-        text: "Classic. Or just stand behind them and whisper 'is it cold in here?'",
-        createdAt: "2026-04-14T08:33:50Z"
-    }
-];
-
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 function Conversation() {
-
     const navigate = useNavigate();
     const { friendId } = useParams();
     const { state } = useLocation();
 
-    const conversation = (friendId == "69d4944bdc68a7a71ca1c6e3") ? conversationWithFriend1 : conversationWithFriend2;
-
     const [conversations, setConversations] = useState<any[]>([]);
-    const [message, setMessage] =  useState('');
+    const [message, setMessage] = useState('');
+    const [inputText, setInputText] = useState(''); // Track typing
     const [loading, setLoading] = useState(false);
-    const [isSending, setIsSending] = useState(false);
-    //const [text, setText] = useState('');
+    const scrollRef = useRef<HTMLDivElement>(null); // Create the ref
 
     const _ud = localStorage.getItem('user_data');
     const ud = _ud ? JSON.parse(_ud) : { id: null };
     const userId = ud._id || ud.id;
 
-    const displayName = state?.name || "Friend";
+    const friendFullName = state.name;
 
-    useEffect(() => {
-        if (!_ud) {
-            navigate('/');
+    // 1. Get Conversation ID either from state or API
+    async function getConvId(): Promise<string | null> {
+        if (state?.conversationId) return state.conversationId;
+
+        try {
+            const token = retrieveToken();
+            const response = await fetch(buildPath('api/conversations'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ friendId })
+            });
+            const res = await response.json();
+            return res.conversationId;
+        } catch (e) {
+            return null;
         }
-        else{
-            try {
-                loadConversations()
-            } catch (e){
-                console.log("loadConversations error: ", e);
-            } finally {
-                setConversations(conversation); //temp hard coded
-            }
-            //loadConversations(); //when api exists
-        }
-
-    }, [navigate, _ud, friendId, isSending]);
-
-    async function fetchConversationId() :Promise<string>{
-        //get onversation id where participants include user and friend id
-
-        return "some conversation id";
     }
 
-    async function loadConversations()
-    {
+    async function loadConversations() {
         setLoading(true);
         try {
-            if(!userId) return;
-
-            const convId = fetchConversationId();
+            const convId = await getConvId();
             const token = retrieveToken();
-            const queryParams = new URLSearchParams({
-                    conversationId: convId.toString()
-            });
 
-            const response = await fetch(`${buildPath('api/messages')}?${queryParams}`, {
+            // Your API expects senderID and conversationID
+            // Note: Since it's a GET, we pass these as Query Params
+            const response = await fetch(`${buildPath('api/messages')}?conversationID=${convId}&senderID=${userId}`, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
             });
 
             const res = await response.json();
-
-            if (res.error && res.error.length > 0) {
-                setMessage("API Error: " + res.error);
-                return;
+            if (res.error) {
+                setMessage(res.error);
             } else {
-                setConversations(res.conversations || []);
+                setConversations(res.messages || []);
             }
 
-            if (res.jwtToken) storeToken({accessToken: res.jwtToken});
-
+            if (res.accessToken) storeToken({ accessToken: res.accessToken });
         } catch (error: any) {
-            console.error(error);
-            setMessage("Failed to load conversations." + error.toString());
+            setMessage("Failed to load messages.");
         } finally {
             setLoading(false);
         }
     }
 
     async function sendMessage(): Promise<void> {
-        setIsSending(true);
-        setIsSending(false);
-        return;
+        if (!inputText.trim()) return;
+
+        try {
+            const token = retrieveToken();
+            const convId = await getConvId();
+
+            const response = await fetch(buildPath('api/messages'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    senderID: userId,
+                    conversationID: convId,
+                    message: inputText
+                })
+            });
+
+            const res = await response.json();
+            if (res.accessToken) storeToken({ accessToken: res.accessToken });
+
+            setInputText(''); // Clear input
+            loadConversations(); // Refresh messages
+        } catch (e) {
+            console.error("Send error", e);
+        }
     }
 
+    useEffect(() => {
+        if (!_ud) {
+            navigate('/');
+            return;
+        }
+        loadConversations();
+    }, [friendId]);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [conversations, loading]);
 
     return (
         <div className={styles.conversationView}>
-
             {loading ? (
-                <div>
+                <div className={styles.loadingContainer}>
                     <p>Loading...</p>
-                    <div>{message}</div>
                 </div>
-                ) : (
+            ) : message !== '' ? (
+                /* 1. Show the message view if 'message' is NOT blank */
+                <div className={styles.apiMessageContainer}>
+                    <p className={styles.errorMessage}>{message}</p>
+                    <button
+                        className={styles.retryButton}
+                        onClick={() => { setMessage(''); loadConversations(); }}
+                    >
+                        Go Back to Chat
+                    </button>
+                </div>
+            ) : (
+                /* 2. Show the normal chat view if 'message' IS blank */
                 <>
-                <div className={styles.conversationHeader}>
-                    <h1 className={styles.messageReceiverName}>{displayName}</h1>
-                    <div className={styles.todaysPrompt}>
-                        <p id={styles.promptHeader}>Today's Prompt</p>
-                        <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenience people?"</p>
+                    <div className={styles.conversationHeader}>
+                        <h1 className={styles.messageReceiverName}>{friendFullName}</h1>
+                        {/* Prompt section remains visible in the chat view */}
+                        <div className={styles.todaysPrompt}>
+                            <p id={styles.promptHeader}>Today's Prompt</p>
+                            <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenience people?"</p>
+                        </div>
                     </div>
-                </div>
 
-                <div className={styles.messages}>
-                    {conversations.map((msg) => {
-                        const isMe = msg.senderId === userId;
-                        return (
-                            <div key={msg._id}
-                                 className={`${styles.conversationMessage} ${isMe ? styles.sent : styles.received}`}>
+                    <div className={styles.messages} ref={scrollRef}>
+                        {conversations.map((msg) => (
+                            <div
+                                key={msg._id}
+                                className={`${styles.conversationMessage} ${msg.fromSender ? styles.sent : styles.received}`}
+                            >
                                 <p id={styles.conversationText}>{msg.text}</p>
                                 <span className={styles.conversationTimestamp}>
-                                    {new Date(msg.createdAt).toLocaleTimeString()}
-                                </span>
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                             </div>
-                        );
-                    })}
-                </div>
+                        ))}
+                    </div>
 
-                <div className={styles.messageInputWrapper}>
-                    <input type="text" id={styles.messageInputText} placeholder="message" />
-                    <button type="button" id={styles.messageInputButton} onClick={sendMessage}>Send</button>
-                </div>
+                    <div className={styles.messageInputWrapper}>
+                        <input
+                            type="text"
+                            id={styles.messageInputText}
+                            placeholder="message"
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                        />
+                        <button
+                            type="button"
+                            id={styles.messageInputButton}
+                            onClick={sendMessage}
+                            disabled={!inputText.trim()} // Bonus: disable if empty
+                        >
+                            Send
+                        </button>
+                    </div>
                 </>
-                )
-            }
-
+            )}
         </div>
     );
-};
+}
+
+
+
 export default Conversation;
