@@ -619,7 +619,7 @@ exports.setApp = function (app, client) {
         }
 
         await db.collection('notifications').insertOne({
-            recepientid: new ObjectId(recepientId),
+            recipientid: new ObjectId(recepientId),
             type: type,
             content: content,
             createdAt: new Date(),
