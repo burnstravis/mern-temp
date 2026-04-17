@@ -633,6 +633,7 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
+
     app.get('/api/return-random-prompt', async (req, res) => {
         try {
             const db = client.db('large_project');
@@ -647,6 +648,12 @@ exports.setApp = function (app, client) {
             const prompt = prompts[randomIndex];
 
             res.status(200).json({ error: '', prompt: prompt });
+        }
+        catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
+    });
+
     app.post('/api/conversations', async (req, res) => {
         const { friendId } = req.body; // The ID of the person you want to chat with
         let jwtToken = req.headers['authorization'];
