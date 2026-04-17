@@ -647,6 +647,10 @@ exports.setApp = function (app, client) {
             const prompt = prompts[randomIndex];
 
             res.status(200).json({ error: '', prompt: prompt });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
     app.post('/api/conversations', async (req, res) => {
         const { friendId } = req.body; // The ID of the person you want to chat with
         let jwtToken = req.headers['authorization'];
