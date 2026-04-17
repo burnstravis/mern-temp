@@ -581,10 +581,14 @@ exports.setApp = function (app, client) {
                 .sort({ createdAt: 1 })
                 .toArray();
 
-            const taggedMessages = messages.map(msg => ({
-                ...msg,
-                fromSender: msg.senderid.equals(senderObjectId)
-            }));
+            const taggedMessages = messages.map(msg => {
+                // 1. Get the sender ID from the message (checking both common casings)
+                const msgSender = msg.senderId;
+                return {
+                    ...msg,
+                    fromSender: msgSender ? msgSender.toString() === senderObjectId.toString() : false
+                    };
+            });
 
             const refreshed = tokenHandler.refresh(jwtToken);
             res.status(200).json({ error: '', messages: taggedMessages, accessToken: refreshed.accessToken });
