@@ -88,6 +88,9 @@ function Messages() {
 
     return (
         <div className={styles.allMessages}>
+
+            <h1 className={styles.messagesHeader}>Messages</h1>
+
             <div className={styles.conversations}>
                 <div className={styles.conversationHeader}>
                     <input
