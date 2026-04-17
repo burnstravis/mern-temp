@@ -6,11 +6,9 @@ import 'package:friend_connector_mobile/services/token_manager.dart';
 class ApiService {
   static const String _baseUrl = localUrl;
 
-
   /// Private helper to handle the "Sliding Session" logic
   /// Automatically updates the stored JWT if the backend sends a fresh one
   static Future<void> _updateSession(Map<String, dynamic> data) async {
-    // Check if accessToken exists AND isn't empty
     if (data.containsKey('accessToken') &&
         data['accessToken'] != null &&
         data['accessToken'].toString().length > 10) {
@@ -74,7 +72,6 @@ class ApiService {
   }) async {
     try {
       final token = await TokenManager.getToken();
-
       final Uri uri = Uri.parse('$_baseUrl/friends').replace(
         queryParameters: {
           'search': search,
@@ -92,7 +89,6 @@ class ApiService {
       );
 
       final Map<String, dynamic> data = jsonDecode(response.body);
-
       if (response.statusCode == 200) {
         await _updateSession(data);
         return data;
@@ -106,19 +102,28 @@ class ApiService {
 
   static Future<Map<String, dynamic>> addFriend(String username) async {
     try {
+      // 1. Get the current token
       final token = await TokenManager.getToken();
 
+      // 2. Use the new endpoint path
       final response = await http.post(
-        Uri.parse('$_baseUrl/add-friend'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$_baseUrl/friends'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 3. Move token to Authorization header as Bearer
+          'Authorization': 'Bearer $token',
+        },
+        // 4. Body now only requires the username
         body: jsonEncode({
           'username': username,
-          'jwtToken': token,
         }),
       );
 
       final data = jsonDecode(response.body);
+
+      // 5. Update session to handle the sliding window (refreshed accessToken)
       await _updateSession(data);
+
       return data;
     } catch (e) {
       return {'error': 'Connection failed: $e'};
@@ -172,6 +177,186 @@ class ApiService {
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  // --- USERS & SEARCH ---
+
+  static Future<Map<String, dynamic>> getUsers({
+    String search = "",
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final token = await TokenManager.getToken();
+      final Uri uri = Uri.parse('$_baseUrl/users').replace(
+        queryParameters: {
+          'search': search,
+          'page': page.toString(),
+          'limit': limit.toString(),
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        await _updateSession(data);
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to fetch users'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  // --- CONVERSATIONS & MESSAGES ---
+
+  /// Matches Web App: logic to find or create a conversation
+  static Future<Map<String, dynamic>> startConversation(String friendId) async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/conversations'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'friendId': friendId}),
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        await _updateSession(data);
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to start conversation'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getConversations() async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/conversations'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        await _updateSession(data);
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to fetch conversations'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendMessage({
+    required String senderID,
+    required String conversationID,
+    required String message,
+  }) async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/messages'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'senderID': senderID,
+          'conversationID': conversationID,
+          'message': message,
+        }),
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200 && (data['error'] == null || data['error'].isEmpty)) {
+        await _updateSession(data);
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to send message'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getMessages({
+    required String senderID,
+    required String conversationID,
+  }) async {
+    try {
+      final token = await TokenManager.getToken();
+      final Uri uri = Uri.parse('$_baseUrl/messages').replace(
+        queryParameters: {
+          'senderID': senderID,
+          'conversationID': conversationID,
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200 && (data['error'] == null || data['error'].isEmpty)) {
+        await _updateSession(data);
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to fetch messages'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  // --- TOKEN HELPERS ---
+
+  /// Robustly decodes the JWT to get the User ID
+  static Future<String?> getUserIdFromToken() async {
+    final token = await TokenManager.getToken();
+    if (token == null || token.isEmpty) return null;
+
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      // Base64Url requires specific normalization in Dart for the payload
+      String payload = parts[1];
+      payload = base64Url.normalize(payload);
+
+      final String decoded = utf8.decode(base64Url.decode(payload));
+      final Map<String, dynamic> payloadMap = json.decode(decoded);
+
+      // Web App uses ud._id || ud.id; we mirror that here.
+      final dynamic userId = payloadMap['id'] ?? payloadMap['_id'] ?? payloadMap['userId'];
+
+      return userId?.toString();
+    } catch (e) {
+      print("JWT Decode Error: $e");
+      return null;
     }
   }
 }

@@ -1,67 +1,153 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/api_service.dart';
+import 'dart:async';
 
-class ConversationPage extends StatelessWidget {
-  final String friendId;
+class ConversationPage extends StatefulWidget {
+  final String conversationId;
+  final String currentUserId;
   final String displayName;
-  final VoidCallback onBack; // Added for navigation back to Friends list
+  final VoidCallback onBack;
 
   const ConversationPage({
     super.key,
-    required this.friendId,
+    required this.conversationId,
+    required this.currentUserId,
     required this.displayName,
     required this.onBack,
   });
 
   @override
+  State<ConversationPage> createState() => _ConversationPageState();
+}
+
+class _ConversationPageState extends State<ConversationPage> {
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  List<dynamic> _messages = [];
+  bool _isLoading = true;
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMessages();
+    // Start polling for new messages every 3 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) => _fetchMessages());
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchMessages() async {
+    if (widget.currentUserId.isEmpty || widget.conversationId.isEmpty) {
+      print("Waiting for IDs... User: '${widget.currentUserId}', Conv: '${widget.conversationId}'");
+
+      return;
+    }
+
+    // 2. Call the API
+    final result = await ApiService.getMessages(
+      senderID: widget.currentUserId,
+      conversationID: widget.conversationId,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+
+        if ((result['error'] == null || result['error'] == "") && result.containsKey('messages')) {
+
+          _messages = List.from(result['messages'].reversed);
+
+        } else {
+          print("API Error or Missing Data: ${result['error']}");
+
+          if (result['error'].toString().contains("JWT")) {
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _handleSend() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    _messageController.clear();
+
+    final result = await ApiService.sendMessage(
+      senderID: widget.currentUserId,
+      conversationID: widget.conversationId,
+      message: text,
+    );
+
+    if (result.containsKey('error') && result['error'].isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'])),
+      );
+    } else {
+      _fetchMessages();
+    }
+  }
+
+  String _formatTime(String? isoDate) {
+    if (isoDate == null) return "";
+    final date = DateTime.parse(isoDate).toLocal();
+    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final ampm = date.hour >= 12 ? "PM" : "AM";
+    final minute = date.minute.toString().padLeft(2, '0');
+    return "$hour:$minute $ampm";
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // We remove Scaffold because it's already inside the HomePage Scaffold
     return SafeArea(
       child: Column(
         children: [
           const SizedBox(height: 20),
           Text(
-              "Friend Connector",
-              style: GoogleFonts.dancingScript(
-                  fontSize: 64,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold
-              )
+            "Friend Connector",
+            style: GoogleFonts.dancingScript(fontSize: 64, color: Colors.white, fontWeight: FontWeight.bold),
           ),
           Text(
-              "Messages",
-              style: GoogleFonts.lora(
-                  fontSize: 18,
-                  fontStyle: FontStyle.italic,
-                  color: const Color(0xFFF0EDFF)
-              )
+            "Messages",
+            style: GoogleFonts.lora(fontSize: 18, fontStyle: FontStyle.italic, color: const Color(0xFFF0EDFF)),
           ),
           const SizedBox(height: 20),
-
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0EDFF),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EDFF),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: [
-                  _buildHeader(context),
-                  Expanded(child: _buildMessageList()),
+                  _buildHeader(),
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _buildMessageList(),
+                  ),
                   _buildInputArea(),
                 ],
               ),
             ),
           ),
-          // Added bottom spacing so the floating nav bar doesn't cover the input
           const SizedBox(height: 90),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -69,135 +155,94 @@ class ConversationPage extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: onBack,
-              ),
+              IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: widget.onBack),
               Expanded(
                 child: Text(
-                  displayName,
-                  textAlign: TextAlign.center, // Centers the text within the expanded space
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  widget.displayName,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ),
-              // This balances the IconButton so the name is perfectly centered in the screen
               const SizedBox(width: 48),
             ],
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0A500),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                Text("Today's Prompt: ", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
-                Expanded(
-                  child: Text(
-                    "if you were a ghost, how would you mildly inconvenience people?",
-                    style: TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildPromptBox(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPromptBox() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: const Color(0xFFF0A500), borderRadius: BorderRadius.circular(20)),
+      child: const Row(
+        children: [
+          Text("Today's Prompt: ", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
+          Expanded(child: Text("if you were a ghost, how would you mildly inconvenience people?", style: TextStyle(fontStyle: FontStyle.italic))),
         ],
       ),
     );
   }
 
   Widget _buildMessageList() {
-    // List should be reversed so index 0 is the bottom-most message
-    final messages = [
-      {"text": "Almost! Just need to fix the charts.", "isMe": true, "time": "2:45 PM"},
-      {"text": "Did you finish that report yet?", "isMe": false, "time": "2:42 PM"},
-    ];
-
+    if (_messages.isEmpty) {
+      return const Center(child: Text("No messages yet. Say hi!"));
+    }
     return ListView.builder(
-      reverse: true, // Key fix: starts scroll at the bottom
+      controller: _scrollController,
+      reverse: true,
       padding: const EdgeInsets.all(16),
-      itemCount: messages.length,
+      itemCount: _messages.length,
       itemBuilder: (context, index) {
-        final msg = messages[index];
-        return _chatBubble(msg['text'] as String, msg['isMe'] as bool, msg['time'] as String);
+        final msg = _messages[index];
+
+        return _chatBubble(
+            msg['text'] ?? "",
+            msg['fromSender'] ?? false,
+            _formatTime(msg['createdAt'])
+        );
       },
     );
   }
 
   Widget _chatBubble(String text, bool isMe, String time) {
-    return Builder(
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            // Align the whole column (bubble + time)
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  Container(
-                    constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.7
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isMe ? const Color(0xFF3C3489) : const Color(0xFFAFA9EC),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(15),
-                        topRight: const Radius.circular(15),
-                        bottomLeft: isMe ? const Radius.circular(15) : Radius.zero,
-                        bottomRight: isMe ? Radius.zero : const Radius.circular(15),
-                      ),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(1, 2))
-                      ],
-                    ),
-                    child: Text(
-                      text,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : Colors.black,
-                        fontFamily: 'Georgia',
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isMe ? const Color(0xFF3C3489) : const Color(0xFFAFA9EC),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(15),
+                topRight: const Radius.circular(15),
+                bottomLeft: isMe ? const Radius.circular(15) : Radius.zero,
+                bottomRight: isMe ? Radius.zero : const Radius.circular(15),
               ),
-              const SizedBox(height: 4),
-              // Time Stamp
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF3C3489),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+            ),
+            child: Text(
+              text,
+              style: TextStyle(color: isMe ? Colors.white : Colors.black, fontSize: 16),
+            ),
           ),
-        );
-      },
+          const SizedBox(height: 4),
+          Text(time, style: const TextStyle(fontSize: 10, color: Color(0xFF3C3489))),
+        ],
+      ),
     );
   }
 
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      height: 80, // Slightly reduced to fit mobile screens better
       decoration: const BoxDecoration(
         color: Color(0xFF3C3489),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20)),
@@ -206,28 +251,20 @@ class ConversationPage extends StatelessWidget {
         children: [
           Expanded(
             child: TextField(
+              controller: _messageController,
+              onSubmitted: (_) => _handleSend(),
               decoration: InputDecoration(
                 fillColor: Colors.white,
                 filled: true,
                 hintText: "message",
-                isDense: true, // Helps with vertical centering
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
               ),
             ),
           ),
           const SizedBox(width: 8),
           Container(
-            decoration: BoxDecoration(
-                color: const Color(0xFFF0A500),
-                borderRadius: BorderRadius.circular(10)
-            ),
-            child: IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.send, color: Colors.black)
-            ),
+            decoration: BoxDecoration(color: const Color(0xFFF0A500), borderRadius: BorderRadius.circular(10)),
+            child: IconButton(onPressed: _handleSend, icon: const Icon(Icons.send, color: Colors.black)),
           ),
         ],
       ),

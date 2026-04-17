@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:friend_connector_mobile/screens/discoverfriends_page.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:friend_connector_mobile/screens/discoverfriends_page.dart';
+import '../services/api_service.dart';
 
 import 'messages_page.dart';
 import 'friends_page.dart';
@@ -17,14 +18,32 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-  int _lastIndex = 0; // TRACK PREVIOUS TAB
+  int _lastIndex = 0;
 
-  String? _activeFriendId;
+  String? _activeConversationId;
   String? _activeFriendName;
+  String? _currentUserId;
 
   static const Color homeWrapperBg = Color(0xFFA89FD8);
   static const Color homeWrapperBorder = Color(0xFF7B6FC4);
   static const Color figmaBlue = Color(0xFF63A7FF);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final userId = await ApiService.getUserIdFromToken();
+
+
+    if (mounted) {
+      setState(() {
+        _currentUserId = userId ?? "";
+      });
+    }
+  }
 
   void _doLogout() {
     Navigator.of(context).pushReplacementNamed('/');
@@ -38,12 +57,12 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: homeWrapperBg,
       body: Stack(
         children: [
-          // 1. THE MAIN CONTENT
+          // The current page content
           Positioned.fill(
             child: _buildPage(_selectedIndex),
           ),
 
-          // 2. THE EDGE-TO-EDGE BORDER
+          // Edge Border (Decorative)
           IgnorePointer(
             child: Container(
               decoration: BoxDecoration(
@@ -53,7 +72,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // 3. LOGOUT BUTTON
+          // Logout Button
           Positioned(
             top: safePadding.top + 10,
             right: 25,
@@ -69,17 +88,16 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Icon(Icons.logout, size: 16, color: Colors.white),
                     SizedBox(width: 4),
-                    Text("Logout",
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)
-                    ),
+                    Text("Logout", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
             ),
           ),
 
+          // Floating Nav Bar
           Positioned(
-            left: 12, // Slightly wider to accommodate more items
+            left: 12,
             right: 12,
             bottom: safePadding.bottom + 10,
             child: _buildFloatingNavBar(),
@@ -96,11 +114,7 @@ class _HomePageState extends State<HomePage> {
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(35),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 10)),
         ],
       ),
       child: Row(
@@ -120,13 +134,16 @@ class _HomePageState extends State<HomePage> {
   Widget _buildNavItem(int index, IconData icon, String label) {
     bool isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() {
-        _lastIndex = _selectedIndex; // Save current before changing
-        _selectedIndex = index;
-      }),
+      onTap: () {
+        if (_selectedIndex == index) return;
+        setState(() {
+          _lastIndex = _selectedIndex;
+          _selectedIndex = index;
+        });
+      },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: MediaQuery.of(context).size.width / 7, // Ensure even distribution
+        width: MediaQuery.of(context).size.width / 7,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -135,73 +152,60 @@ class _HomePageState extends State<HomePage> {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 42 : 0, // Shrunk slightly to fit 6 items
+                  width: isSelected ? 42 : 0,
                   height: 28,
-                  decoration: BoxDecoration(
-                    color: isSelected ? figmaBlue : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  decoration: BoxDecoration(color: isSelected ? figmaBlue : Colors.transparent, borderRadius: BorderRadius.circular(10)),
                 ),
-                Icon(
-                  icon,
-                  color: isSelected ? Colors.white : Colors.black45,
-                  size: 20, // Shrunk from 24 to 20
-                ),
+                Icon(icon, color: isSelected ? Colors.white : Colors.black45, size: 20),
               ],
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 8, // Shrunk from 10 to 8 for 6 items
-                color: isSelected ? figmaBlue : Colors.black87,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
+            Text(label, style: TextStyle(fontSize: 8, color: isSelected ? figmaBlue : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
           ],
         ),
       ),
     );
   }
 
-
-
   Widget _buildPage(int index) {
     switch (index) {
       case 0: return _buildHomeView();
       case 1:
         return MessagesPage(
-          onOpenChat: (id, name) {
+          onOpenChat: (convId, name) {
             setState(() {
-              _activeFriendId = id;
+              _activeConversationId = convId;
               _activeFriendName = name;
-              _lastIndex = 1; // Mark that we came from Messages
+              _lastIndex = 1;
               _selectedIndex = 6;
             });
           },
         );
       case 2:
         return FriendsPage(
-          onOpenChat: (id, name) {
+          onOpenChat: (convId, name) {
             setState(() {
-              _activeFriendId = id;
+              _activeConversationId = convId;
               _activeFriendName = name;
-              _lastIndex = 2; // Mark that we came from Friends
+              _lastIndex = 2;
               _selectedIndex = 6;
             });
           },
         );
-      case 3: return DiscoverPage();
-      case 4: return const Center(child: Text("Notifications"));
+      case 3: return const DiscoverPage();
+      case 4: return const Center(child: Text("Notifications", style: TextStyle(color: Colors.white)));
       case 5: return _buildSettingsView();
       case 6:
+        if (_currentUserId == null || _currentUserId!.isEmpty) {
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
+        }
         return ConversationPage(
-          friendId: _activeFriendId ?? "",
+          conversationId: _activeConversationId ?? "",
+          currentUserId: _currentUserId!,
           displayName: _activeFriendName ?? "Friend",
           onBack: () {
             setState(() {
-              _selectedIndex = _lastIndex; // RETURN TO SAVED PREVIOUS TAB
+              _selectedIndex = _lastIndex;
             });
           },
         );
@@ -209,33 +213,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
   Widget _buildHomeView() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Material(
-            type: MaterialType.transparency,
-            child: Text(
-              "Friend Connector",
-              style: GoogleFonts.dancingScript(
-                fontSize: 50,
-                fontWeight: FontWeight.bold,
-                color: Colors.white
-              ),
+          Text(
+            "Friend Connector",
+            style: GoogleFonts.dancingScript(
+              fontSize: 64,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
             ),
           ),
           const SizedBox(height: 10),
-          Material(
-            type: MaterialType.transparency,
-            child: Text(
-              "Welcome, ${widget.firstName}",
-              style: GoogleFonts.lora(
+          Text(
+            "Welcome Home ${widget.firstName.isNotEmpty ? widget.firstName[0].toUpperCase() + widget.firstName.substring(1) : ''}",
+            style: GoogleFonts.lora(
                 fontSize: 18,
                 fontStyle: FontStyle.italic,
                 color: Colors.white70
-              ),
             ),
           ),
           const SizedBox(height: 40),
@@ -253,14 +251,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 80),
-            Text(
-              "Settings",
-              style: GoogleFonts.lora(
-                fontSize: 32,
-                color: Colors.white,
-                fontWeight: FontWeight.bold
-              ),
-            ),
+            Text("Settings", style: GoogleFonts.lora(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
             const Divider(color: Colors.white24, height: 40),
             _settingsTile(Icons.person_outline, "Account Info"),
             _settingsTile(Icons.notifications_none, "Push Notifications"),
