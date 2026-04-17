@@ -5,29 +5,13 @@ import styles from '../pages/AddFriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
 import {buildPath} from "./path.ts";
 
-const fakeUsers = [
-    {
-        _id: '69d4944bdc68a7a71ca1c6e4',
-        username: 'tech_wizard',
-        firstName: 'Alice',
-        lastName: 'Smith',
-        birthday: '1995-11-23T00:00:00.000Z'
-    },
-    {
-        _id: '69d4944bdc68a7a71ca1c6e5',
-        username: 'nature_lover',
-        firstName: 'Bob',
-        lastName: 'Green',
-        birthday: '1992-02-14T00:00:00.000Z'
-    }
-];
 
 function AddFriends() {
 
     const navigate = useNavigate();
 
     const [searchText, setSearchText] = useState('');
-    const [users, setUsers] = useState(fakeUsers);
+    const [users, setUsers] = useState<any[]>([]);
     const [message,setMessage] = useState('');
 
 
@@ -43,66 +27,126 @@ function AddFriends() {
             fetchUsers(searchText)
         }
 
-    }, [navigate, _ud, searchText]);
+    }, [navigate, _ud]);
 
 
 
     async function fetchUsers(searchText: string) {
         try{
-            setUsers(fakeUsers)
-            console.log(searchText);
+            searchUsers(searchText);
         }
         catch(e){
             setMessage('Unable to fetch users: ' + e);
         }
     }
 
-    async function sendFriendRequest(targetUsername: string) {
-
+    async function sendFriendRequest(targetUsername: string, targetUserId: string) {
         setMessage('');
-
         try {
             const token = retrieveToken();
+            if (!token) { navigate('/'); return; }
 
-            if (!token) {
-                navigate('/');
-                return;
-            }
-
-            const response = await fetch(buildPath('api/add-friend'), {
+            const response = await fetch(buildPath('api/friends'), {
                 method: 'POST',
-                body: JSON.stringify({ username: targetUsername, jwtToken: token}),
+                body: JSON.stringify({ username: targetUsername }),
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
             const res = await response.json();
-            console.log(res);
 
-            if (res.error && res.error.length > 0) {
+            if (res.error) {
                 setMessage(res.error);
-
-                if (res.error.toLowerCase().includes("expired") || res.error.toLowerCase().includes("jwt")) {
-                    navigate('/');
-                }
                 return;
             }
 
+            if (res.friendshipId) {
+                sendFriendRequestNotification(targetUserId, res.friendshipId);
+            }
+
             setMessage(`Friend request sent to @${targetUsername}!`);
+
 
         } catch (e) {
             setMessage('Unable to send a friend request: ' + e);
         }
     }
 
-    const filteredUsers = users.filter(user =>
-        user.username.toLowerCase().includes(searchText.toLowerCase())
-    );
+    async function sendFriendRequestNotification(targetUserId: string, friendshipId: string) {
+        try {
+            const token = retrieveToken();
+            if (!token) return;
+
+            // Get your own data to put your name in the notification
+            const _ud = localStorage.getItem('user_data');
+            const ud = _ud ? JSON.parse(_ud) : {};
+            const myName = ud.firstName + " " + ud.lastName || "A user";
+
+            await fetch(buildPath('api/notifications'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    recipientId: targetUserId,
+                    type: 'friend_request',
+                    content: `${myName} sent you a friend request!`,
+                    relatedId: friendshipId
+                })
+            });
+
+        } catch (e) {
+            console.error("Error sending notification:", e);
+        }
+    }
+
+    async function searchUsers(searchText: string) {
+        setMessage('');
+        try {
+            const token = retrieveToken();
+            if (!token) {
+                navigate('/');
+                return;
+            }
+
+            const response = await fetch(buildPath(`api/users?search=${encodeURIComponent(searchText)}`), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const res = await response.json();
+
+            if (res.error) {
+                setMessage(res.error);
+                if (res.error.toLowerCase().includes("expired") || res.error.toLowerCase().includes("jwt")) {
+                    navigate('/');
+                }
+                setUsers([]);
+                return;
+            }
+
+            setUsers(res.users);
+            return;
+
+        } catch (e) {
+            setMessage('Search failed: ' + e);
+            setUsers([]);
+            return;
+        }
+    }
 
     const handleSearch = () => {
+        setMessage('');
+        searchUsers
         fetchUsers(searchText)
     };
+
 
 
     return (
@@ -126,8 +170,8 @@ function AddFriends() {
                 </div>
 
                 <div className={styles.listUsersContainer}>
-                    {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => (
+                    {users.length > 0 ? (
+                        users.map((user) => (
                             <div key={user._id} className={styles.userCard}>
 
                                 <div className={styles.userCardInner}>
@@ -150,7 +194,7 @@ function AddFriends() {
                                 <button
                                     id={styles.sendRequest}
                                     type="button"
-                                    onClick={() => sendFriendRequest(user.username)}
+                                    onClick={() => sendFriendRequest(user.username, user._id)}
                                 >
                                     Send
                                 </button>

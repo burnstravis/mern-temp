@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import styles from '../pages/FriendsPage.module.css'
+import { retrieveToken, storeToken } from '../tokenStorage';
+import { buildPath } from './path';
+import { useNavigate } from "react-router-dom";
+import styles from '../pages/FriendsPage.module.css';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -7,72 +10,19 @@ interface Notification {
   _id: string;
   recipientId: string;
   type:
-    | 'friend_request'
-    | 'alert'
-    | 'birthday'
-    | 'support_received'
-    | 'birthday_wish_received';
+      | 'friend_request'
+      | 'alert'
+      | 'birthday'
+      | 'support_received'
+      | 'birthday_wish_received';
   content: string;
-  createdAt: Date;
+  createdAt: string | Date;
   isRead: boolean;
-  relatedId: string;
-  senderName: string;
+  relatedId: string | null;
+  senderUsername?: string;
+  senderFirstName?: string;
+  senderLastName?: string;
 }
-
-// ── Mock Data ─────────────────────────────────────────────────────────
-
-const mockNotifications: Notification[] = [
-  {
-    _id: '1',
-    recipientId: 'user1',
-    type: 'friend_request',
-    content: '',
-    createdAt: new Date(),
-    isRead: false,
-    relatedId: 'user2',
-    senderName: 'John Doe'
-  },
-  {
-    _id: '3',
-    recipientId: 'user1',
-    type: 'birthday',
-    content: '',
-    createdAt: new Date(),
-    isRead: false,
-    relatedId: 'user3',
-    senderName: 'Alex'
-  },
-  {
-    _id: '4',
-    recipientId: 'user1',
-    type: 'alert',
-    content: 'I could use some well wishes for my upcoming test',
-    createdAt: new Date(),
-    isRead: false,
-    relatedId: 'user4',
-    senderName: 'Mike'
-  },
-  {
-    _id: '5',
-    recipientId: 'user1',
-    type: 'support_received',
-    content: 'You got this! Keep going! 💙',
-    createdAt: new Date(),
-    isRead: false,
-    relatedId: 'user5',
-    senderName: 'Emily'
-  },
-  {
-    _id: '6',
-    recipientId: 'user1',
-    type: 'birthday_wish_received',
-    content: 'Happy Birthday! Hope you have a great day! 🎉',
-    createdAt: new Date(),
-    isRead: false,
-    relatedId: 'user6',
-    senderName: 'Chris'
-  }
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -87,22 +37,27 @@ const notificationIcon = (type: Notification['type']): string => {
   }
 };
 
-const notificationLabel = (type: Notification['type'], senderName?: string): string => {
+
+const notificationLabel = (type: Notification['type'], content?: string): string => {
+  if (content && content.trim().length > 0) {
+    return content;
+  }
+
   switch (type) {
-    case 'friend_request':          return `Friend request from ${senderName}`;
-    case 'birthday':                return `Send a birthday wish to ${senderName}`;
-    case 'alert':                   return `Send support to ${senderName}`;
-    case 'support_received':        return `Support message from ${senderName}`;
-    case 'birthday_wish_received':  return `Birthday wish from ${senderName}`;
+    case 'friend_request':          return 'New friend request';
+    case 'birthday':                return "Birthday notification";
+    case 'alert':                   return "Support alert";
+    case 'support_received':        return "Support received";
+    case 'birthday_wish_received':  return "Birthday wish received";
     default:                        return 'Notification';
   }
 };
 
 const isRespondable = (type: Notification['type']): boolean =>
-  type === 'birthday' || type === 'alert';
+    type === 'birthday' || type === 'alert';
 
 const isViewOnly = (type: Notification['type']): boolean =>
-  type === 'support_received' || type === 'birthday_wish_received';
+    type === 'support_received' || type === 'birthday_wish_received';
 
 // ── Modal ─────────────────────────────────────────────────────────────
 
@@ -118,7 +73,7 @@ const ResponseModal: React.FC<ModalProps> = ({ notification, onClose, onSend }) 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const header = `${notificationIcon(notification.type)} ${notificationLabel(notification.type, notification.senderName)}`;
+  const header = `${notificationIcon(notification.type)} ${notificationLabel(notification.type, notification.content)}`;
 
   const handleSend = async () => {
     if (!message.trim()) {
@@ -139,71 +94,47 @@ const ResponseModal: React.FC<ModalProps> = ({ notification, onClose, onSend }) 
   };
 
   return (
-    <div id="modalOverlay" style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.4)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000
-    }}>
-      <div id="modalCard" className="Modalcard">
-        <p id="modalHeading" className="cardHeading">{header}</p>
+      <div id="modalOverlay" style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+        display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+      }}>
+        <div id="modalCard" className="Modalcard">
+          <p id="modalHeading" className="cardHeading">{header}</p>
 
-        {isViewOnly(notification.type) && notification.content ? (
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            padding: '12px 14px',
-            margin: '12px 0',
-            fontSize: '14px',
-            lineHeight: '1.6',
-            color: '#111111'
-          }}>
-            {notification.content}
-          </div>
-        ) : (
           <p id="modalSubtext" className="cardSubtext">
             {notification.content || ''}
           </p>
-        )}
 
-        {!isViewOnly(notification.type) && (
-          <div className="fieldGroup">
-            <label className="label">
-              {notification.type === 'birthday' ? 'Birthday Message' : 'Support Message'}
-            </label>
-            <textarea
-              className="input"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={
-                notification.type === 'birthday'
-                  ? 'Write a birthday message...'
-                  : 'Write a support message...'
-              }
-              rows={4}
-              style={{ width: '100%', resize: 'vertical' }}
-            />
-          </div>
-        )}
+          {!isViewOnly(notification.type) && (
+              <div className="fieldGroup">
+                <label className="label">
+                  {notification.type === 'birthday' ? 'Birthday Message' : 'Support Message'}
+                </label>
+                <textarea
+                    className="input"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder={notification.type === 'birthday' ? 'Write a birthday message...' : 'Write a support message...'}
+                    rows={4}
+                    style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+          )}
 
-        {error   && <p className="errorMsg" style={{ color: 'red'   }}>{error}</p>}
-        {success && <p className="errorMsg" style={{ color: 'green' }}>{success}</p>}
+          {error   && <p className="errorMsg" style={{ color: 'red' }}>{error}</p>}
+          {success && <p className="errorMsg" style={{ color: 'green' }}>{success}</p>}
 
-        {!isViewOnly(notification.type) && (
-          <button type="button" className="button" onClick={handleSend} disabled={sending}>
-            {sending ? 'Sending...' : 'Send'}
+          {!isViewOnly(notification.type) && (
+              <button type="button" className="button" onClick={handleSend} disabled={sending}>
+                {sending ? 'Sending...' : 'Send'}
+              </button>
+          )}
+
+          <button type="button" className="backButton" onClick={onClose}>
+            ← Close
           </button>
-        )}
-
-        <button type="button" className="backButton" onClick={onClose}>
-          ← Close
-        </button>
+        </div>
       </div>
-    </div>
   );
 };
 
@@ -212,94 +143,155 @@ const ResponseModal: React.FC<ModalProps> = ({ notification, onClose, onSend }) 
 interface NotificationCardProps {
   notification: Notification;
   onClick: () => void;
-  onFriendAction?: (action: 'accept' | 'decline') => void;
+  onAccept: (notif: Notification) => Promise<void>;
   friendResolved?: 'accept' | 'decline' | null;
 }
 
 const NotificationCard: React.FC<NotificationCardProps> = ({
-  notification,
-  onClick,
-  onFriendAction,
-  friendResolved
-}) => (
-  <div
-    id={`notificationCard-${notification._id}`}
-    className="Notifcard"
-    onClick={onClick}
-    style={{ cursor: 'pointer', marginBottom: '6px' }}
-  >
-    <div className="fieldRow" style={{ alignItems: 'center' }}>
-      <p className="cardHeading" style={{ margin: 0 }}>
-        {notificationIcon(notification.type)} {notificationLabel(notification.type, notification.senderName)}
-        {!notification.isRead && (
-          <span style={{ color: '#3b82f6', marginLeft: '6px' }}>●</span>
-        )}
-      </p>
-    </div>
-
-    {notification.type === 'friend_request' && !friendResolved && (
-      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-        <div className={styles.actionButtons}>
-            <button
-                className={styles.acceptBtn}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    //handleAccept(friendship._id);
-                }}
-            >Accept
-            </button>
-            <button
-                className={styles.rejectBtn}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    //handleReject(friendship._id);
-                }}
-            >Decline
-            </button>
+                                                             notification,
+                                                             onClick,
+                                                             onAccept,
+                                                             friendResolved
+                                                           }) => {
+  return (
+      <div
+          id={`notificationCard-${notification._id}`}
+          className="Notifcard"
+          onClick={onClick}
+          style={{ cursor: 'pointer', marginBottom: '6px' }}
+      >
+        <div className="fieldRow" style={{ alignItems: 'center' }}>
+          <p className="cardHeading" style={{ margin: 0 }}>
+            {notificationIcon(notification.type)} {notificationLabel(notification.type, notification.content)}
+            {!notification.isRead && (
+                <span style={{ color: '#3b82f6', marginLeft: '6px' }}>●</span>
+            )}
+          </p>
         </div>
-      </div>
-    )}
 
-    {notification.type === 'friend_request' && friendResolved && (
-      <p style={{
-        fontSize: '13px',
-        marginTop: '6px',
-        color: friendResolved === 'accept' ? 'green' : 'red'
-      }}>
-        {friendResolved === 'accept' ? 'Friend request accepted' : 'Friend request declined'}
-      </p>
-    )}
-  </div>
-);
+        {notification.type === 'friend_request' && !friendResolved && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <div className={styles.actionButtons}>
+                <button
+                    className={styles.acceptBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAccept(notification);
+                    }}
+                >
+                  Accept
+                </button>
+                <button
+                    className={styles.rejectBtn}
+                    onClick={(e) => { e.stopPropagation(); }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+        )}
+
+        {notification.type === 'friend_request' && friendResolved && (
+            <p style={{
+              fontSize: '13px',
+              marginTop: '6px',
+              color: friendResolved === 'accept' ? 'green' : 'red'
+            }}>
+              {friendResolved === 'accept' ? 'Friend request accepted' : 'Friend request declined'}
+            </p>
+        )}
+      </div>
+  );
+};
 
 // ── Main Component ────────────────────────────────────────────────────
 
 const Notifications: React.FC = () => {
+  const navigate = useNavigate();
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeNotification, setActiveNotification] = useState<Notification | null>(null);
   const [friendActions, setFriendActions] = useState<Record<string, 'accept' | 'decline'>>({});
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    const _ud = localStorage.getItem('user_data');
+    if (!_ud) {
+      navigate('/');
+    } else {
+      fetchNotifications();
+    }
+  }, [navigate]);
 
   const fetchNotifications = async () => {
-    await new Promise(res => setTimeout(res, 500));
-    setNotifications(mockNotifications);
-    setLoading(false);
+    const token = retrieveToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(buildPath('api/notifications'), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const res = await response.json();
+      if (res.accessToken) storeToken(res.accessToken);
+
+      if (res.notifications) {
+        setNotifications(res.notifications);
+      }
+    } catch (e) {
+      console.error("Failed to fetch notifications", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAccept = async (notif: Notification) => {
+    const token = retrieveToken();
+    if (!token) {
+      navigate('/');
+      return;
+    }
+
+    if (!notif.relatedId) {
+      console.error("Critical Error: relatedId is missing.");
+      return;
+    }
+
+    try {
+      const response = await fetch(buildPath('api/accept-friend-request'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          friendship_id: notif.relatedId,
+          senderId: notif.relatedId
+        })
+      });
+
+      const res = await response.json();
+      if (res.accessToken) storeToken(res.accessToken);
+
+      if (response.ok) {
+        setFriendActions(prev => ({ ...prev, [notif._id]: 'accept' }));
+        markAsRead(notif._id);
+      } else {
+        console.error("Acceptance API Error:", res.error);
+      }
+    } catch (e) {
+      console.error("Network error accepting friend request:", e);
+    }
   };
 
   const markAsRead = (id: string) => {
     setNotifications(prev =>
-      prev.map(n => n._id === id ? { ...n, isRead: true } : n)
+        prev.map(n => n._id === id ? { ...n, isRead: true } : n)
     );
-  };
-
-  // API call for accept/decline goes here
-  const handleFriendAction = (id: string, action: 'accept' | 'decline') => {
-    markAsRead(id);
-    setFriendActions(prev => ({ ...prev, [id]: action }));
   };
 
   const handleClick = (notification: Notification) => {
@@ -307,58 +299,47 @@ const Notifications: React.FC = () => {
     markAsRead(notification._id);
     if (isRespondable(notification.type) || isViewOnly(notification.type)) {
       setActiveNotification(notification);
-      return;
     }
-    /*
-    switch (notification.type) {
-      case 'message':
-        window.location.href = `/messages?conversation=${notification.relatedId}`;
-        break;
-    }
-    */
   };
 
   const handleSendResponse = async (message: string) => {
-    console.log('Mock send:', message);
+    console.log('Response sent:', message);
     await new Promise(res => setTimeout(res, 800));
   };
 
   return (
-    <div id="notificationsCard" className="card">
-      <p id="notificationsHeading" className="cardHeading">Notifications</p>
-      <p id="notificationsSubtext" className="cardSubtext">
-        Stay up to date with your friends latest activity
-      </p>
+      <div id="notificationsCard" className="card">
+        <p id="notificationsHeading" className="cardHeading">Notifications</p>
+        <p id="notificationsSubtext" className="cardSubtext">
+          Stay up to date with your friends' latest activity
+        </p>
 
-      {loading ? (
-        <p className="cardSubtext">Loading...</p>
-      ) : notifications.length === 0 ? (
-        <p className="cardSubtext">No notifications yet.</p>
-      )  : (
-        <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
-          {notifications.map(n => (
-            <NotificationCard
-              key={n._id}
-              notification={n}
-              onClick={() => handleClick(n)}
-              onFriendAction={n.type === 'friend_request'
-                ? (action) => handleFriendAction(n._id, action)
-                : undefined
-              }
-              friendResolved={friendActions[n._id] ?? null}
+        {loading ? (
+            <p className="cardSubtext">Loading...</p>
+        ) : notifications.length === 0 ? (
+            <p className="cardSubtext">No notifications yet.</p>
+        ) : (
+            <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+              {notifications.map(n => (
+                  <NotificationCard
+                      key={n._id}
+                      notification={n}
+                      onClick={() => handleClick(n)}
+                      onAccept={handleAccept}
+                      friendResolved={friendActions[n._id] ?? null}
+                  />
+              ))}
+            </div>
+        )}
+
+        {activeNotification && (
+            <ResponseModal
+                notification={activeNotification}
+                onClose={() => setActiveNotification(null)}
+                onSend={handleSendResponse}
             />
-          ))}
-        </div>
-      )}
-
-      {activeNotification && (
-        <ResponseModal
-          notification={activeNotification}
-          onClose={() => setActiveNotification(null)}
-          onSend={handleSendResponse}
-        />
-      )}
-    </div>
+        )}
+      </div>
   );
 };
 

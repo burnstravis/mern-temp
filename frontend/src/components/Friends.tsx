@@ -35,6 +35,7 @@ function Friends() {
             navigate('/');
         } else {
             fetchFriends(pageNumber);
+
         }
     }, [pageNumber]);
 
@@ -60,7 +61,6 @@ function Friends() {
 
             const res = await response.json();
 
-
             if (!response.ok || res.error) {
                 const errorMsg = res.error || "An unknown error occurred";
                 setMessage("API Error: " + errorMsg);
@@ -84,12 +84,15 @@ function Friends() {
         } finally {
             setLoading(false);
         }
+
+
     }
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setPageNumber(newPage);
         }
+
     };
 
 
