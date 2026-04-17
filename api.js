@@ -97,7 +97,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-
     app.post('/api/email-recovery', async (req, res) => {
 
         const { email } = req.body;
@@ -128,6 +127,7 @@ exports.setApp = function (app, client) {
                 text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.
                 This email is a test if it is correct. TO BE REWRITTEN.`
             });
+
             if (sendError) throw new Error(sendError.message);
 
             res.status(200).json({ success: "SENT RECOVERY CODE TO EMAIL" });
@@ -136,7 +136,6 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: e.toString() });
         }
     });
-
 
     app.post('/api/reset-password', async (req, res, next) =>
     {
@@ -215,7 +214,7 @@ exports.setApp = function (app, client) {
 
                 }
             } else {
-                ret = { error: "Login/Password incorrect", accessToken: '' };
+                res.status(200).json({ error: "Login or Password incorrect" });
             }
         } catch (e) {
             ret = { error: e.toString() };
@@ -224,84 +223,81 @@ exports.setApp = function (app, client) {
     });
 
     app.get('/api/users', async (req, res) => {
-    const search = req.query.search || "";
-    const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
-
-    let jwtToken = req.headers['authorization'];
-
-    if (!jwtToken) {
-        return res.status(401).json({ error: 'No token provided.' });
-    }
-
-    try {
-        if (jwtToken.startsWith('Bearer ')) {
-            jwtToken = jwtToken.slice(7);
-        }
-
-        const db = client.db('large_project');
-
-        if (tokenHandler.isExpired(jwtToken)) {
-            return res.status(401).json({ error: 'Token expired.' });
-        }
-
-        const decoded = require('jsonwebtoken').decode(jwtToken);
-        if (!decoded || !decoded.id) {
-            return res.status(401).json({ error: 'Invalid token payload.' });
-        }
-
-        const requesterId = new ObjectId(decoded.id);
-        const skip = (page - 1) * limit;
-
-        const userFilter = {
-            verified: true,
-            _id: { $ne: requesterId }
-        };
-
-        if (sanitizedSearch) {
-            const searchRegex = { $regex: sanitizedSearch, $options: 'i' };
-            userFilter.$or = [
-                { firstName: searchRegex },
-                { lastName: searchRegex },
-                { email: searchRegex },
-                { username: searchRegex }
-            ];
-        }
-
-        const refreshed = tokenHandler.refresh(jwtToken);
-
-        const [users, total] = await Promise.all([
-            db.collection('users')
-                .find(userFilter)
-                .project({ firstName: 1, lastName: 1, username: 1, email: 1, birthday: 1 })
-                .skip(skip)
-                .limit(limit)
-                .toArray(),
-            db.collection('users').countDocuments(userFilter)
-        ]);
-
-        return res.status(200).json({
-            users,
-            page,
-            totalPages: Math.ceil(total / limit),
-            total,
-            accessToken: refreshed.accessToken
-        });
-    } catch (e) {
-        console.error("Get Users Error:", e);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-});
-    
-    app.get('/api/friends', async (req, res) => {
-        // 1. Pull and Sanitize Query Parameters
-        // Sanitizing search to prevent Regex Injection (ReDoS attacks)
         const search = req.query.search || "";
         const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // Math.max/min ensures we don't pass NaN, 0, or negative numbers to MongoDB
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        try {
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7);
+            }
+
+            const db = client.db('large_project');
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            if (!decoded || !decoded.id) {
+                return res.status(401).json({ error: 'Invalid token payload.' });
+            }
+
+            const requesterId = new ObjectId(decoded.id);
+            const skip = (page - 1) * limit;
+
+            const userFilter = {
+                verified: true,
+                _id: { $ne: requesterId }
+            };
+
+            if (sanitizedSearch) {
+                const searchRegex = { $regex: sanitizedSearch, $options: 'i' };
+                userFilter.$or = [
+                    { firstName: searchRegex },
+                    { lastName: searchRegex },
+                    { email: searchRegex },
+                    { username: searchRegex }
+                ];
+            }
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            const [users, total] = await Promise.all([
+                db.collection('users')
+                    .find(userFilter)
+                    .project({ firstName: 1, lastName: 1, username: 1, email: 1, birthday: 1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray(),
+                db.collection('users').countDocuments(userFilter)
+            ]);
+
+            return res.status(200).json({
+                users,
+                page,
+                totalPages: Math.ceil(total / limit),
+                total,
+                accessToken: refreshed.accessToken
+            });
+        } catch (e) {
+            console.error("Get Users Error:", e);
+            return res.status(500).json({ error: "Internal server error" });
+        }
+    });
+    
+    app.get('/api/friends', async (req, res) => {
+        const search = req.query.search || "";
+        const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
         
@@ -312,17 +308,15 @@ exports.setApp = function (app, client) {
         }
 
         try {
-            // Standardize token: Remove "Bearer " prefix if it exists
             if (jwtToken.startsWith('Bearer ')) {
                 jwtToken = jwtToken.slice(7, jwtToken.length);
             }
 
-            const db = client.db('large_project');
-            
-            // 2. Security: Verify and decode the token
             if (tokenHandler.isExpired(jwtToken)) {
                 return res.status(401).json({ error: 'Token expired.' });
             }
+
+            const db = client.db('large_project');
             
             const decoded = require('jsonwebtoken').decode(jwtToken);
             if (!decoded || !decoded.id) {
@@ -332,24 +326,18 @@ exports.setApp = function (app, client) {
             const requesterId = new ObjectId(decoded.id);
             const skip = (page - 1) * limit; 
 
-            // 3. Find all friendships where the user is either requester or recipient
-            // NOTE: Add .find({ ..., status: 'accepted' }) back here later if you want 
-            // to hide pending requests from this list.
             const friendshipDocs = await db.collection('friendships')
                 .find({ 
                     $or: [{ requesterId: requesterId }, { recipientId: requesterId }]
                 })
                 .toArray();
 
-            // 4. Map to get the ID of the *other* person in each document
             const friendIds = friendshipDocs.map(f => 
                 f.requesterId.equals(requesterId) ? f.recipientId : f.requesterId
             );
             
-            // Refresh token to keep the sliding session alive
             const refreshed = tokenHandler.refresh(jwtToken);
             
-            // If they have no friends, return empty now to save DB resources
             if (friendIds.length === 0) {
                 return res.status(200).json({
                     friends: [],
@@ -360,7 +348,6 @@ exports.setApp = function (app, client) {
                 });
             }
 
-            // 5. Build the Filter for the 'users' collection
             const userFilter = { _id: { $in: friendIds } };
 
             if (sanitizedSearch) {
@@ -372,7 +359,6 @@ exports.setApp = function (app, client) {
                 ];
             }
 
-            // 6. Fetch user details and count matching friends in parallel
             const [friends, total] = await Promise.all([
                 db.collection('users')
                     .find(userFilter)
@@ -459,7 +445,6 @@ exports.setApp = function (app, client) {
                 status: 'pending'
             });
 
-            // Notification: Send to recipient
             await db.collection('notifications').insertOne({
                 recipientid: recipientObjectId,
                 type: 'friend_request',
@@ -530,7 +515,6 @@ exports.setApp = function (app, client) {
                 { $set: { status: 'accepted' } }
             );
 
-            // Notification: Send to the original requester
             await db.collection('notifications').insertOne({
                 recipientId: friendship.requesterId,
                 type: 'friend_accepted',
@@ -553,8 +537,6 @@ exports.setApp = function (app, client) {
 
         return res.status(200).json(ret);
     });
-
-
 
     app.post('/api/messages', async (req, res) => {
         
@@ -582,13 +564,11 @@ exports.setApp = function (app, client) {
                 createdAt: new Date()
             });
 
-            // Update conversation "last activity"
             await db.collection('conversations').updateOne(
                 { _id: conversationObjectId },
                 { $set: { lastMessage: message, lastMessageAt: new Date() } }
             );
 
-            // Notification: Find the other participant to notify
             const convo = await db.collection('conversations').findOne({ _id: conversationObjectId });
             if (convo) {
                 const recipientId = convo.participants.find(p => p.toString() !== senderObjectId.toString());
@@ -612,7 +592,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-
     app.get('/api/messages', async (req, res) => {
         
         let jwtToken = req.headers['authorization'];
@@ -623,8 +602,7 @@ exports.setApp = function (app, client) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
         }
 
-
-        try{
+        try {
             if (tokenHandler.isExpired(jwtToken)) {
                 return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
             }
@@ -639,7 +617,6 @@ exports.setApp = function (app, client) {
                 .toArray();
 
             const taggedMessages = messages.map(msg => {
-                // 1. Get the sender ID from the message (checking both common casings)
                 const msgSender = msg.senderId;
                 return {
                     ...msg,
@@ -650,7 +627,7 @@ exports.setApp = function (app, client) {
             const refreshed = tokenHandler.refresh(jwtToken);
             res.status(200).json({ error: '', messages: taggedMessages, accessToken: refreshed.accessToken });
         }
-        catch (e){
+        catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
@@ -738,7 +715,7 @@ exports.setApp = function (app, client) {
         console.error("Fetch Notifications Error:", e);
         res.status(500).json({ error: e.toString(), accessToken: '' });
     }
-});
+    });
 
     app.get('/api/return-random-prompt', async (req, res) => {
         try {
@@ -758,8 +735,9 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: e.toString() });
         }
     });
+
     app.post('/api/conversations', async (req, res) => {
-        const { friendId } = req.body; // The ID of the person you want to chat with
+        const { friendId } = req.body;
         let jwtToken = req.headers['authorization'];
 
         if (!jwtToken) {
@@ -771,12 +749,10 @@ exports.setApp = function (app, client) {
         }
 
         try {
-            // Standardize token
             if (jwtToken.startsWith('Bearer ')) {
                 jwtToken = jwtToken.slice(7, jwtToken.length);
             }
 
-            // Security: Check token validity
             if (tokenHandler.isExpired(jwtToken)) {
                 return res.status(401).json({ error: 'Token expired.' });
             }
@@ -787,8 +763,6 @@ exports.setApp = function (app, client) {
 
             const db = client.db('large_project');
 
-            // 1. Check if a conversation already exists between these two users
-            // We search for a doc where the 'participants' array contains BOTH IDs
             const existingConversation = await db.collection('conversations').findOne({
                 participants: { $all: [userId, friendObjectId] }
             });
@@ -802,7 +776,6 @@ exports.setApp = function (app, client) {
                 });
             }
 
-            // 2. If no conversation exists, create a new one
             const newConversation = {
                 participants: [userId, friendObjectId],
                 lastMessage: "",
@@ -833,7 +806,6 @@ exports.setApp = function (app, client) {
         }
 
         try {
-            // 1. Standardize and Verify Token
             if (jwtToken.startsWith('Bearer ')) {
                 jwtToken = jwtToken.slice(7, jwtToken.length);
             }
@@ -846,18 +818,11 @@ exports.setApp = function (app, client) {
             const userId = new ObjectId(decoded.id);
             const db = client.db('large_project');
 
-            // 2. Fetch Conversations
-            // We find any conversation where this user is a participant
-            // and sort by the most recent message activity
+
             const conversations = await db.collection('conversations')
                 .find({ participants: userId })
                 .sort({ lastMessageAt: -1 }) 
                 .toArray();
-
-            // 3. Optional: Get Friend Info (Optimization)
-            // Currently, your schema only has IDs. To show names in the inbox,
-            // we'd typically "join" the user data here or fetch it in React.
-            // For now, let's return the raw list.
 
             const refreshed = tokenHandler.refresh(jwtToken);
 
@@ -878,7 +843,6 @@ exports.setApp = function (app, client) {
 
         if (!jwtToken) return res.status(401).json({ error: "No token provided." });
 
-        // Strict one-word validation
         const validTypes = ["Encouragement", "Advice", "Chat", "Celebrate"];
 
         if (!content || !type) {
@@ -911,7 +875,6 @@ exports.setApp = function (app, client) {
 
             const result = await db.collection('support_requests').insertOne(newRequest);
 
-            // Notification: Send to all friends of the user
             const friendships = await db.collection('friendships').find({
                 $or: [{ requesterId: userId }, { recipientId: userId }],
                 status: 'accepted'
@@ -972,6 +935,52 @@ exports.setApp = function (app, client) {
             });
         } catch (e) {
             res.status(500).json({ error: e.toString() });
+        }
+    });
+
+    app.get('/api/return-random-prompt', async (req, res) => {
+        try {
+            const db = client.db('large_project');
+            const prompts = await db.collection('prompts').find().toArray();
+            if (!prompts.length) return res.status(404).json({ error: 'No prompts' });
+            res.status(200).json({ prompt: prompts[crypto.randomInt(0, prompts.length)] });
+        } catch (e) { 
+            res.status(500).json({ error: e.toString() }); 
+        }
+    });
+
+    app.get('/api/receive-notification', async (req, res) => {
+
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.', accessToken: '' });
+        }
+
+        try {
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+            }
+
+            const db = client.db('large_project');
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const recepientId = decoded?.id;
+
+            if (!recepientId) {
+                return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
+            }
+
+            const notifications = await db.collection('notifications').find({
+                recipientid: new ObjectId(recepientId),
+                isRead: false
+            }).toArray();
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({ error: '', notifications: notifications, accessToken: refreshed.accessToken });
+        }
+        catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
 
