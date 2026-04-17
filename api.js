@@ -637,6 +637,51 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
+
+    app.get('/api/read-notifications', async (req, res) => {
+
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(400).json({ error: 'Token is required.', accessToken: '' });
+        }
+
+        try {
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+            }
+
+        const db = client.db('large_project');
+
+        const decoded = require('jsonwebtoken').decode(jwtToken);   
+        const recepientId = decoded?.id;
+
+        if (!recepientId) {
+            return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
+        }
+
+        const notifications = await db.collection('notifications').updateOne(
+            { recipientid: new ObjectId(recepientId), isRead: false },
+            { $set: { isRead: true } },
+        )
+    
+        const refreshed = tokenHandler.refresh(jwtToken);
+
+        let ret;
+
+        ret = {
+
+                error: '',
+                message: 'Notifications marked as read.',
+                accessToken: refreshed.accessToken
+        }
+
+        res.status(200).json({ error: '', notifications: notifications, accessToken: refreshed.accessToken });
+        } catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
+    });
+
     app.get('/api/return-random-prompt', async (req, res) => {
         try {
             const db = client.db('large_project');
