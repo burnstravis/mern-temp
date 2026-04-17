@@ -524,7 +524,10 @@ exports.setApp = function (app, client) {
 
 
     app.post('/api/messages', async (req, res) => {
-        const { senderID, conversationID, message, jwtToken } = req.body;
+        
+        let jwtToken = req.headers['authorization'];
+        
+        const { senderID, conversationID, message} = req.body;
 
         if (!senderID || !conversationID || !message || !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, message, and token are required.', accessToken: '' });
@@ -552,9 +555,11 @@ exports.setApp = function (app, client) {
     });
 
 
-    app.get('/api/read-messages', async (req, res) => {
+    app.get('/api/messages', async (req, res) => {
         
-        const { senderID, conversationID, jwtToken } = req.body;
+        let jwtToken = req.headers['authorization'];
+        
+        const { senderID, conversationID } = req.body;
 
         if (!senderID || !conversationID|| !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
