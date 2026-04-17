@@ -47,7 +47,7 @@ exports.setApp = function (app, client) {
             await resend.emails.send({
                 from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
-                subject: '[TEST] VERIFY EMAIL',
+                subject: 'VERIFY EMAIL FOR FRIEND CONNECTOR',
                 text: `Your verification code is: ${verificationCode}`
             });
             res.status(200).json({ error: '' });
@@ -58,15 +58,116 @@ exports.setApp = function (app, client) {
 
     app.post('/api/verify-email', async (req, res) => {
         const { email, code } = req.body;
+
+        if (!email || !code) {
+            return res.status(400).json({ error: 'Email and code are required.' });
+        }
+
         try {
             const db = client.db('large_project');
+
             const user = await db.collection('users').findOne({ email: email, verified: false });
-            if (!user || user.verificationCode !== code.trim()) {
-                return res.status(400).json({ error: 'Invalid code or email.' });
+
+            if (!user) {
+                return res.status(400).json({ error: 'No pending registration found for this email.' });
             }
-            await db.collection('users').updateOne({ email }, { $set: { verified: true }, $unset: { verificationCode: '' } });
+
+            if (user.verificationCode !== code.trim()) {
+                return res.status(400).json({ error: 'WRONG CODE.' });
+            }
+
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { verified: true }, $unset: { verificationCode: '' } }
+            );
+
             res.status(200).json({ Success: 'SUCCESSFULLY VERIFIED' });
-        } catch (e) { res.status(500).json({ error: e.toString() }); }
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
+
+
+    app.post('/api/email-recovery', async (req, res) => {
+
+        const { email } = req.body;
+        const verificationCode = crypto.randomInt(10000, 99999).toString();
+
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required.' });
+        }
+
+        try {
+            const db = client.db('large_project');
+
+            const user = await db.collection('users').findOne({ email: email, verified: true });
+
+            if (!user) {
+                return res.status(400).json({ error: 'No verified account found for this email.' });
+            }
+
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { verificationCode: verificationCode } }
+            );
+
+            const { error: sendError } = await resend.emails.send({
+                from: 'noreply@largeproject.nathanfoss.me',
+                to: email,
+                subject: 'VERIFY EMAIL FOR FRIEND CONNECTOR',
+                text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.`
+            });
+            if (sendError) throw new Error(sendError.message);
+
+            res.status(200).json({ success: "SENT RECOVERY CODE TO EMAIL" });
+        }
+        catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
+
+    app.post('/api/reset-password', async (req, res, next) =>
+    {
+        const { email, verificationCode, password, confirmpassword } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: 'Username required.' });
+        }
+        if (!verificationCode) {
+            return res.status(400).json({ error: 'Verification code is required.' });
+        }
+        if (!password || !confirmpassword) {
+            return res.status(400).json({ error: 'Password and confirmation are required.' });
+        }
+        if (password !== confirmpassword) {
+            return res.status(400).json({ error: 'Passwords do not match.' });
+        }
+
+        try {
+            const db = client.db('large_project');
+
+            const user = await db.collection('users').findOne({ email: email, verified: true });
+
+            if (!user) {
+                return res.status(400).json({ error: 'No verified account found for this email.' });
+            }
+
+            if (user.verificationCode !== verificationCode) {
+                return res.status(400).json({ error: 'Verification code is incorrect.' });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            await db.collection('users').updateOne(
+                { email: email },
+                { $set: { password: hashedPassword }, $unset: { verificationCode: '' } }
+            );
+
+            res.status(200).json({ success: "Password reset successful. Please login with the new password." });
+        }
+        catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
     });
 
     app.post('/api/login', async (req, res) => {
@@ -408,7 +509,7 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.get('/api/read-notifications', async (req, res) => {
+    app.get('/api/notifications', async (req, res) => {
 
         let jwtToken = req.headers['authorization'];
 
@@ -534,10 +635,73 @@ exports.setApp = function (app, client) {
         } catch (e) { res.status(500).json({ error: e.toString() }); }
     });
 
+    app.get('/api/conversations', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        try {
+            // 1. Standardize and Verify Token
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7, jwtToken.length);
+            }
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const db = client.db('large_project');
+
+            // 2. Fetch Conversations
+            // We find any conversation where this user is a participant
+            // and sort by the most recent message activity
+            const conversations = await db.collection('conversations')
+                .find({ participants: userId })
+                .sort({ lastMessageAt: -1 }) 
+                .toArray();
+
+            // 3. Optional: Get Friend Info (Optimization)
+            // Currently, your schema only has IDs. To show names in the inbox,
+            // we'd typically "join" the user data here or fetch it in React.
+            // For now, let's return the raw list.
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            res.status(200).json({
+                conversations: conversations,
+                accessToken: refreshed.accessToken
+            });
+
+        } catch (e) {
+            console.error("Get Conversations Error:", e);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    });
+
     app.post('/api/support-requests', async (req, res) => {
         const { content, type } = req.body;
-        let jwtToken = req.headers['authorization']?.split(' ')[1] || req.headers['authorization'];
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) return res.status(401).json({ error: "No token provided." });
+
+        if (!content || !type) {
+            return res.status(400).json({ error: "Content and type are required." });
+        }
+
+        // Strict one-word validation
+        const validTypes = ["Encouragement", "Advice", "Chat", "Celebrate"];
+
+        if (!validTypes.includes(type)) {
+            return res.status(400).json({ error: "Invalid type. Must be: Encouragement, Advice, Chat, or Celebrate." });
+        }
+
         try {
+            if (jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
+            if (tokenHandler.isExpired(jwtToken)) return res.status(401).json({ error: "Token expired." });
             const db = client.db('large_project');
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const userId = new ObjectId(decoded.id);
@@ -556,6 +720,38 @@ exports.setApp = function (app, client) {
 
             res.status(200).json({ error: '', accessToken: tokenHandler.refresh(jwtToken).accessToken });
         } catch (e) { res.status(500).json({ error: e.toString() }); }
+    });
+
+    app.get('/api/support-requests', async (req, res) => {
+        const typeFilter = req.query.type; 
+        let jwtToken = req.headers['authorization'];
+
+        try {
+            if (jwtToken && jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
+
+            const db = client.db('large_project');
+            const now = new Date();
+
+            let query = { expiresAt: { $gt: now } };
+
+            if (typeFilter) {
+                query.type = typeFilter;
+            }
+
+            const activeRequests = await db.collection('support_requests')
+                .find(query)
+                .sort({ createdAt: -1 })
+                .toArray();
+
+            const accessToken = jwtToken ? tokenHandler.refresh(jwtToken).accessToken : '';
+
+            res.status(200).json({
+                requests: activeRequests,
+                accessToken: accessToken
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
     });
 
     app.get('/api/return-random-prompt', async (req, res) => {
