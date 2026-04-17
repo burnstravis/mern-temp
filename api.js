@@ -598,7 +598,7 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.post('api/notifications', async (req, res) => {
+    app.post('/api/notifications', async (req, res) => {
 
         let jwtToken = req.headers['authorization'];
 
