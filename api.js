@@ -474,7 +474,10 @@ exports.setApp = function (app, client) {
     });
 
     app.post('/api/accept-friend-request', async (req, res) => {
-        const { friendship_id, jwtToken } = req.body;  
+        
+        let jwtToken = req.headers['authorization'];
+        
+        const { friendship_id } = req.body;  
 
         if (!friendship_id || !jwtToken) {
             return res.status(400).json({ error: 'Friendship ID and token are required.', accessToken: '' });
