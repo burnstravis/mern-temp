@@ -609,26 +609,26 @@ exports.setApp = function (app, client) {
                 return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
             }
 
-        const db = client.db('large_project');
+            const db = client.db('large_project');
 
-        const decoded = require('jsonwebtoken').decode(jwtToken);
-        const recepientId = decoded?.id;
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const recepientId = decoded?.id;
 
-        if (!recepientId) {
-            return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
-        }
+            if (!recepientId) {
+                return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
+            }
 
-        await db.collection('notifications').insertOne({
-            recepientid: new ObjectId(recepientId),
-            type: type,
-            content: content,
-            createdAt: new Date(),
-            isRead: false,
-            relatedId: relatedId ? new ObjectId(relatedId) : null
-        });
+            await db.collection('notifications').insertOne({
+                recepientid: new ObjectId(recepientId),
+                type: type,
+                content: content,
+                createdAt: new Date(),
+                isRead: false,
+                relatedId: relatedId ? new ObjectId(relatedId) : null
+            });
 
-        const refreshed = tokenHandler.refresh(jwtToken);
-        res.status(200).json({ error: '', accessToken: refreshed.accessToken });
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({ error: '', accessToken: refreshed.accessToken });
         } catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
