@@ -583,7 +583,7 @@ exports.setApp = function (app, client) {
 
             const taggedMessages = messages.map(msg => {
                 // 1. Get the sender ID from the message (checking both common casings)
-                const msgSender = msg.senderId;
+                const msgSender = msg.senderID;
                 return {
                     ...msg,
                     fromSender: msgSender ? msgSender.toString() === senderObjectId.toString() : false
