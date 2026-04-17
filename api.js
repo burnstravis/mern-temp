@@ -87,7 +87,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-
     app.post('/api/email-recovery', async (req, res) => {
 
         const { email } = req.body;
@@ -117,6 +116,7 @@ exports.setApp = function (app, client) {
                 subject: 'VERIFY EMAIL FOR FRIEND CONNECTOR',
                 text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.`
             });
+
             if (sendError) throw new Error(sendError.message);
 
             res.status(200).json({ success: "SENT RECOVERY CODE TO EMAIL" });
@@ -180,7 +180,7 @@ exports.setApp = function (app, client) {
                 const tokenData = tokenHandler.createToken(user.firstName, user.lastName, user._id);
                 res.status(200).json({ id: user._id, firstName: user.firstName, lastName: user.lastName, accessToken: tokenData.accessToken, error: '' });
             } else {
-                res.status(200).json({ error: "Login/Password incorrect" });
+                res.status(200).json({ error: "Login or Password incorrect" });
             }
         } catch (e) { res.status(500).json({ error: e.toString() }); }
     });
@@ -255,7 +255,7 @@ exports.setApp = function (app, client) {
             console.error("Get Users Error:", e);
             return res.status(500).json({ error: "Internal server error" });
         }
-});
+    });
     
     app.get('/api/friends', async (req, res) => {
         // 1. Pull and Sanitize Query Parameters
@@ -426,7 +426,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-
     app.get('/api/messages', async (req, res) => {
         
         let jwtToken = req.headers['authorization'];
@@ -436,7 +435,6 @@ exports.setApp = function (app, client) {
         if (!senderID || !conversationID|| !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
         }
-
 
         try{
             if (tokenHandler.isExpired(jwtToken)) {
@@ -771,7 +769,7 @@ exports.setApp = function (app, client) {
             return res.status(401).json({ error: 'No token provided.', accessToken: '' });
         }
 
-        try{
+        try {
             if (tokenHandler.isExpired(jwtToken)) {
                 return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
             }
@@ -793,7 +791,7 @@ exports.setApp = function (app, client) {
             const refreshed = tokenHandler.refresh(jwtToken);
             res.status(200).json({ error: '', notifications: notifications, accessToken: refreshed.accessToken });
         }
-        catch (e){
+        catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
