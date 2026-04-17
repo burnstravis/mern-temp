@@ -424,7 +424,7 @@ exports.setApp = function (app, client) {
 
             const recipient = await db.collection('users').findOne({
                 username: username,
-                verified: true
+                // verified: true
             });
 
             if (!recipient) {
