@@ -624,4 +624,23 @@ exports.setApp = function (app, client) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
+    app.get('/api/return-random-prompt', async (req, res) => {
+        try {
+            const db = client.db('large_project');
+
+            const prompts = await db.collection('prompts').find().toArray();
+
+            if (!prompts.length) {
+                return res.status(404).json({ error: 'No prompts found.' });
+            }
+
+            const randomIndex = crypto.randomInt(0, prompts.length);
+            const prompt = prompts[randomIndex];
+
+            res.status(200).json({ error: '', prompt: prompt });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
+        }
+    });
+
 }
