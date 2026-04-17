@@ -224,75 +224,75 @@ exports.setApp = function (app, client) {
     });
 
     app.get('/api/users', async (req, res) => {
-    const search = req.query.search || "";
-    const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const search = req.query.search || "";
+        const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
 
-    let jwtToken = req.headers['authorization'];
+        let jwtToken = req.headers['authorization'];
 
-    if (!jwtToken) {
-        return res.status(401).json({ error: 'No token provided.' });
-    }
-
-    try {
-        if (jwtToken.startsWith('Bearer ')) {
-            jwtToken = jwtToken.slice(7);
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
         }
 
-        const db = client.db('large_project');
+        try {
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7);
+            }
 
-        if (tokenHandler.isExpired(jwtToken)) {
-            return res.status(401).json({ error: 'Token expired.' });
+            const db = client.db('large_project');
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            if (!decoded || !decoded.id) {
+                return res.status(401).json({ error: 'Invalid token payload.' });
+            }
+
+            const requesterId = new ObjectId(decoded.id);
+            const skip = (page - 1) * limit;
+
+            const userFilter = {
+                verified: true,
+                _id: { $ne: requesterId }
+            };
+
+            if (sanitizedSearch) {
+                const searchRegex = { $regex: sanitizedSearch, $options: 'i' };
+                userFilter.$or = [
+                    { firstName: searchRegex },
+                    { lastName: searchRegex },
+                    { email: searchRegex },
+                    { username: searchRegex }
+                ];
+            }
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+
+            const [users, total] = await Promise.all([
+                db.collection('users')
+                    .find(userFilter)
+                    .project({ firstName: 1, lastName: 1, username: 1, email: 1, birthday: 1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray(),
+                db.collection('users').countDocuments(userFilter)
+            ]);
+
+            return res.status(200).json({
+                users,
+                page,
+                totalPages: Math.ceil(total / limit),
+                total,
+                accessToken: refreshed.accessToken
+            });
+        } catch (e) {
+            console.error("Get Users Error:", e);
+            return res.status(500).json({ error: "Internal server error" });
         }
-
-        const decoded = require('jsonwebtoken').decode(jwtToken);
-        if (!decoded || !decoded.id) {
-            return res.status(401).json({ error: 'Invalid token payload.' });
-        }
-
-        const requesterId = new ObjectId(decoded.id);
-        const skip = (page - 1) * limit;
-
-        const userFilter = {
-            verified: true,
-            _id: { $ne: requesterId }
-        };
-
-        if (sanitizedSearch) {
-            const searchRegex = { $regex: sanitizedSearch, $options: 'i' };
-            userFilter.$or = [
-                { firstName: searchRegex },
-                { lastName: searchRegex },
-                { email: searchRegex },
-                { username: searchRegex }
-            ];
-        }
-
-        const refreshed = tokenHandler.refresh(jwtToken);
-
-        const [users, total] = await Promise.all([
-            db.collection('users')
-                .find(userFilter)
-                .project({ firstName: 1, lastName: 1, username: 1, email: 1, birthday: 1 })
-                .skip(skip)
-                .limit(limit)
-                .toArray(),
-            db.collection('users').countDocuments(userFilter)
-        ]);
-
-        return res.status(200).json({
-            users,
-            page,
-            totalPages: Math.ceil(total / limit),
-            total,
-            accessToken: refreshed.accessToken
-        });
-    } catch (e) {
-        console.error("Get Users Error:", e);
-        return res.status(500).json({ error: "Internal server error" });
-    }
 });
     
     app.get('/api/friends', async (req, res) => {
