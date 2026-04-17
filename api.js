@@ -398,7 +398,7 @@ exports.setApp = function (app, client) {
 
     app.post('/api/friends', async (req, res,) =>
     {
-        const username = req.body;
+        const { username } = req.body;
         let jwtToken = req.headers['authorization']; 
 
         if (!username || !jwtToken) {
