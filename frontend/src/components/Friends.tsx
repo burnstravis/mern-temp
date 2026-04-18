@@ -79,7 +79,7 @@ function Friends() {
                 }
             }
         } catch (e) {
-            setMessage("Failed to load friends" + e);
+            setMessage("Failed to load friends list");
             setFriends([]);
         } finally {
             setLoading(false);

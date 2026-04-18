@@ -3,6 +3,8 @@ import { retrieveToken, storeToken } from '../tokenStorage';
 import {useEffect, useRef, useState} from 'react';
 import styles from '../pages/ConversationsPage.module.css'
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { io, Socket } from "socket.io-client";
+
 
 function Conversation() {
     const navigate = useNavigate();
@@ -14,6 +16,7 @@ function Conversation() {
     const [inputText, setInputText] = useState(''); // Track typing
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null); // Create the ref
+    const socketRef = useRef<Socket | null>(null); // To store the socket instance
 
     const _ud = localStorage.getItem('user_data');
     const ud = _ud ? JSON.parse(_ud) : { id: null };
@@ -21,7 +24,6 @@ function Conversation() {
 
     const friendFullName = state.name;
 
-    // 1. Get Conversation ID either from state or API
     async function getConvId(): Promise<string | null> {
         if (state?.conversationId) return state.conversationId;
 
@@ -45,8 +47,6 @@ function Conversation() {
             const convId = await getConvId();
             const token = retrieveToken();
 
-            // Your API expects senderID and conversationID
-            // Note: Since it's a GET, we pass these as Query Params
             const response = await fetch(`${buildPath('api/messages')}?conversationID=${convId}&senderID=${userId}`, {
                 method: 'GET',
                 headers: {
@@ -92,13 +92,46 @@ function Conversation() {
             const res = await response.json();
             if (res.accessToken) storeToken({ accessToken: res.accessToken });
 
-            setInputText(''); // Clear input
-            loadConversations(); // Refresh messages
+            setInputText('');
         } catch (e) {
             console.error("Send error", e);
         }
     }
 
+    useEffect(() => {
+        if (!_ud) {
+            navigate('/');
+            return;
+        }
+
+        loadConversations();
+
+        const token = retrieveToken();
+        socketRef.current = io(buildPath(""), {
+            auth: { token }
+        });
+
+        const setupSocket = async () => {
+            const convId = await getConvId();
+            if (convId) {
+                socketRef.current?.emit('join:conversation', convId);
+
+                socketRef.current?.on('message:new', (newMessage: any) => {
+                    setConversations((prev) => {
+                        if (prev.find(m => m._id === newMessage._id)) return prev;
+                        return [...prev, {
+                            ...newMessage,
+                            fromSender: newMessage.senderId === userId
+                        }];
+                    });
+                });
+            }
+        };
+
+        setupSocket();
+
+        return () => { socketRef.current?.disconnect(); };
+    }, [friendId]);
     useEffect(() => {
         if (!_ud) {
             navigate('/');
@@ -120,7 +153,6 @@ function Conversation() {
                     <p>Loading...</p>
                 </div>
             ) : message !== '' ? (
-                /* 1. Show the message view if 'message' is NOT blank */
                 <div className={styles.apiMessageContainer}>
                     <p className={styles.errorMessage}>{message}</p>
                     <button
@@ -131,7 +163,6 @@ function Conversation() {
                     </button>
                 </div>
             ) : (
-                /* 2. Show the normal chat view if 'message' IS blank */
                 <>
                     <div className={styles.conversationHeader}>
                         <h1 className={styles.messageReceiverName}>{friendFullName}</h1>
@@ -169,7 +200,7 @@ function Conversation() {
                             type="button"
                             id={styles.messageInputButton}
                             onClick={sendMessage}
-                            disabled={!inputText.trim()} // Bonus: disable if empty
+                            disabled={!inputText.trim()}
                         >
                             Send
                         </button>

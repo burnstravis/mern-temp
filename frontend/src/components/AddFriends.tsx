@@ -135,7 +135,7 @@ function AddFriends() {
             return;
 
         } catch (e) {
-            setMessage('Search failed: ' + e);
+            setMessage('Failed to find users');
             setUsers([]);
             return;
         }
