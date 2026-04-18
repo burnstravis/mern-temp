@@ -4,7 +4,7 @@ import 'package:friend_connector_mobile/services/constants.dart';
 import 'package:friend_connector_mobile/services/token_manager.dart';
 
 class ApiService {
-  static const String _baseUrl = localUrl;
+  static const String _baseUrl = prodUrl;
 
   /// Private helper to handle the "Sliding Session" logic
   /// Automatically updates the stored JWT if the backend sends a fresh one
