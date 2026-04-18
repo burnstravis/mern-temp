@@ -6,7 +6,21 @@ const { Resend } = require('resend');
 const crypto = require('crypto');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-exports.setApp = function (app, client) {
+exports.setApp = function (app, client, io) {
+
+    const emitMessageEvent = (conversationId, payload) => {
+        if (!io || !conversationId) return;
+        io.to(`conversation:${conversationId}`).emit('message:new', payload);
+    };
+
+    const emitConversationEvent = (participantIds, payload) => {
+        if (!io || !Array.isArray(participantIds)) return;
+
+        participantIds.forEach((participantId) => {
+            if (!participantId) return;
+            io.to(`user:${participantId.toString()}`).emit('conversation:updated', payload);
+        });
+    };
 
     app.post('/api/register', async (req, res) => {
         const { firstName, lastName, email, username, password, birthday} = req.body;
@@ -558,20 +572,38 @@ exports.setApp = function (app, client) {
             const senderObjectId = new ObjectId(senderID);
             const conversationObjectId = new ObjectId(conversationID);
 
-            await db.collection('messages').insertOne({
+            const createdAt = new Date();
+
+            const messageInsert = await db.collection('messages').insertOne({
                 conversationId: conversationID,
                 senderId: senderID,
                 text: message,
-                createdAt: new Date()
+                createdAt: createdAt
             });
 
             await db.collection('conversations').updateOne(
                 { _id: conversationObjectId },
-                { $set: { lastMessage: message, lastMessageAt: new Date() } }
+                { $set: { lastMessage: message, lastMessageAt: createdAt } }
             );
+
+            const createdMessage = {
+                _id: messageInsert.insertedId.toString(),
+                conversationId: conversationID,
+                senderId: senderID,
+                text: message,
+                createdAt,
+                fromSender: true
+            };
 
             const convo = await db.collection('conversations').findOne({ _id: conversationObjectId });
             if (convo) {
+                emitMessageEvent(conversationID, createdMessage);
+                emitConversationEvent(convo.participants, {
+                    conversationId: conversationID,
+                    lastMessage: message,
+                    lastMessageAt: createdAt
+                });
+
                 const recipientId = convo.participants.find(p => p.toString() !== senderObjectId.toString());
                 if (recipientId) {
                     const sender = await db.collection('users').findOne({ _id: senderObjectId });
@@ -587,7 +619,7 @@ exports.setApp = function (app, client) {
             }
 
             const refreshed = tokenHandler.refresh(jwtToken);
-            res.status(200).json({ error: '', accessToken: refreshed.accessToken });
+            res.status(200).json({ error: '', message: createdMessage, accessToken: refreshed.accessToken });
         } catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
@@ -597,7 +629,8 @@ exports.setApp = function (app, client) {
         
         let jwtToken = req.headers['authorization'];
         
-        const { senderID, conversationID } = req.body;
+        const senderID = req.query.senderID || req.body?.senderID;
+        const conversationID = req.query.conversationID || req.body?.conversationID;
 
         if (!senderID || !conversationID|| !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
