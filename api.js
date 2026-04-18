@@ -461,7 +461,7 @@ exports.setApp = function (app, client, io) {
             });
 
             await db.collection('notifications').insertOne({
-                recipientid: recipientObjectId,
+                recipientId: recipientObjectId,
                 type: 'friend_request',
                 content: `${requesterFirstName} sent you a friend request.`,
                 createdAt: new Date(),
@@ -513,7 +513,7 @@ exports.setApp = function (app, client, io) {
             }
 
             const userObjectId = new ObjectId(userId);
-            const friendshipObjectId = new ObjectId(friendship_id);
+            const friendshipObjectId = new ObjectId(friendshipId);
 
             const friendship = await db.collection('friendships').findOne({ 
                 _id: friendshipObjectId, 
@@ -691,7 +691,7 @@ exports.setApp = function (app, client, io) {
         }
 
         await db.collection('notifications').insertOne({
-            recipientid: new ObjectId(recepientId),
+            recipientId: new ObjectId(recepientId),
             type: type,
             content: content,
             createdAt: new Date(),
@@ -732,9 +732,8 @@ exports.setApp = function (app, client, io) {
 
         const userObjectId = new ObjectId(userId);
 
-        // 1. Fetch all notifications for this user (sorted by newest first)
         const notifications = await db.collection('notifications')
-            .find({ recipientId: userObjectId }) // Use recipientId if you standardized to camelCase
+            .find({ recipientId: userObjectId })
             .sort({ createdAt: -1 })
             .toArray();
 
@@ -972,17 +971,6 @@ exports.setApp = function (app, client, io) {
         }
     });
 
-    app.get('/api/return-random-prompt', async (req, res) => {
-        try {
-            const db = client.db('large_project');
-            const prompts = await db.collection('prompts').find().toArray();
-            if (!prompts.length) return res.status(404).json({ error: 'No prompts' });
-            res.status(200).json({ prompt: prompts[crypto.randomInt(0, prompts.length)] });
-        } catch (e) { 
-            res.status(500).json({ error: e.toString() }); 
-        }
-    });
-
     app.get('/api/receive-notification', async (req, res) => {
 
         let jwtToken = req.headers['authorization'];
@@ -1006,7 +994,7 @@ exports.setApp = function (app, client, io) {
             }
 
             const notifications = await db.collection('notifications').find({
-                recipientid: new ObjectId(recepientId),
+                recipientId: new ObjectId(recepientId),
                 isRead: false
             }).toArray();
 
