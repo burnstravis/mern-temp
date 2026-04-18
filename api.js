@@ -637,14 +637,14 @@ exports.setApp = function (app, client, io) {
         const db = client.db('large_project');
 
         const decoded = require('jsonwebtoken').decode(jwtToken);
-        const recepientId = decoded?.id;
+        const recipientId = decoded?.id;
 
-        if (!recepientId) {
+        if (!recipientId) {
             return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
         }
 
         await db.collection('notifications').insertOne({
-            recipientId: new ObjectId(recepientId),
+            recipientId: new ObjectId(recipientId),
             type: type,
             content: content,
             createdAt: new Date(),
@@ -889,53 +889,6 @@ exports.setApp = function (app, client, io) {
 
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const userId = new ObjectId(decoded.id);
-            const db = client.db('large_project');
-
-            const now = new Date();
-            const expiresAt = new Date(now.getTime() + (24 * 60 * 60 * 1000));
-
-            const newRequest = {
-                userId: userId,
-                content: content,
-                type: type,
-                createdAt: now,
-                expiresAt: expiresAt
-            };
-
-            const result = await db.collection('support_requests').insertOne(newRequest);
-            const refreshed = tokenHandler.refresh(jwtToken);
-
-            res.status(200).json({
-                requestId: result.insertedId,
-                accessToken: refreshed.accessToken
-            });
-        } catch (e) {
-            res.status(500).json({ error: e.toString() });
-        }
-    });
-
-    app.post('/api/support-requests', async (req, res) => {
-        const { content, type } = req.body;
-        let jwtToken = req.headers['authorization'];
-
-        if (!jwtToken) return res.status(401).json({ error: "No token provided." });
-
-        const validTypes = ["Encouragement", "Advice", "Chat", "Celebrate"];
-
-        if (!content || !type) {
-            return res.status(400).json({ error: "Content and type are required." });
-        }
-
-        if (!validTypes.includes(type)) {
-            return res.status(400).json({ error: "Invalid type. Must be: Encouragement, Advice, Chat, or Celebrate." });
-        }
-
-        try {
-            if (jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
-            if (tokenHandler.isExpired(jwtToken)) return res.status(401).json({ error: "Token expired." });
-
-            const decoded = require('jsonwebtoken').decode(jwtToken);
-            const userId = new ObjectId(decoded.id);
             const userFirstName = decoded?.firstName || "A friend";
             const db = client.db('large_project');
 
@@ -1031,14 +984,14 @@ exports.setApp = function (app, client, io) {
             const db = client.db('large_project');
 
             const decoded = require('jsonwebtoken').decode(jwtToken);
-            const recepientId = decoded?.id;
+            const recipientId = decoded?.id;
 
-            if (!recepientId) {
+            if (!recipientId) {
                 return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
             }
 
             const notifications = await db.collection('notifications').find({
-                recipientId: new ObjectId(recepientId),
+                recipientId: new ObjectId(recipientId),
                 isRead: false
             }).toArray();
 

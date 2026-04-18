@@ -14,6 +14,7 @@ import HomePage from "./pages/HomePage.tsx";
 import Navbar from "./components/Navbar.tsx";
 import FriendsPage from "./pages/FriendsPage.tsx";
 import AddFriendsPage from "./pages/AddFriendsPage.tsx";
+import SupportPage from "./pages/SupportPage.tsx";
 
 const ProtectedRoute = () => {
     const isLogged = localStorage.getItem('user_data');
@@ -48,7 +49,7 @@ function App() {
                 <Route path="/friends" element={<FriendsPage />} />
                 <Route path="/notifications" element={<NotificationPage />} />
                 <Route path="/addfriends" element={<AddFriendsPage />} />
-
+                <Route path="/support" element={<SupportPage />} />
             </Route>
         </Routes>
       </BrowserRouter>

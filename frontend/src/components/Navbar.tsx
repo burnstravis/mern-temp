@@ -23,7 +23,7 @@ const Navbar = () => {
                 <button className={styles.friendsButton} onClick={() => navigate('/friends')}>Friends</button>
                 <button className={styles.addfriendsButton} onClick={() => navigate('/addfriends')}>Discover Friends</button>
                 <button className={styles.notificationsButton} onClick={() => navigate('/notifications')}>Notifications</button>
-                <button className={styles.settingsButton} onClick={() => navigate('/settings')}>Settings</button>
+                <button className={styles.supportButton} onClick={() => navigate('/support')}>Support</button>
             </div>
 
             <div className={styles.NavigatorLogOut}>

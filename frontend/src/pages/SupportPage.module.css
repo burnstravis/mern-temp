@@ -1,0 +1,126 @@
+.supportWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    background: #ffffff;
+    padding: 40px 20px;
+    border-radius: 20px;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.supportTitle {
+    align-self: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: bold;
+    font-size: 32px;
+    color: #3c3489;
+    margin: 0;
+}
+
+.supportSubtitle {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: #ffffff;
+    margin: 0 0 16px 0;
+    text-align: center;
+}
+
+.supportContainer{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background: #afa9ec;
+    border-radius: 10px;
+    margin: 8px 0;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.supportForm {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.fieldGroup {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 5px;
+}
+
+.label {
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    color: #3c3489;
+    font-size: 14px;
+    margin-left: 4px;
+}
+
+.dropdown {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px solid #f0a500;
+    background-color: white;
+    font-size: 16px;
+    color: #3c3489;
+    outline: none;
+    cursor: pointer;
+}
+
+.textarea {
+    background: #ffffff;
+    width: 100%;
+    color: #08060d;
+    min-height: 120px;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+    font-family: inherit;
+    box-sizing: border-box;
+    outline: none;
+    resize: none;
+    border: 2px solid #f0a500;
+
+}
+
+.sendButton {
+    margin-top: 20px;
+    padding: 12px 30px;
+    background-color: #f0a500;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.sendButton:hover:not(:disabled) {
+    background: rgba(240, 165, 0, 0.9);
+    transition: background-color .5s;
+    box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.sendButton:active:not(:disabled) {
+    transform: scale(0.98);
+    transition: ease-in-out .03s;
+}
+
+.sendButton:disabled {
+    background-color: #999;
+    cursor: not-allowed;
+    box-shadow: none;
+}
