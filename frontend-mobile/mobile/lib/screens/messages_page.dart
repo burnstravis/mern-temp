@@ -69,7 +69,6 @@ class _MessagesPageState extends State<MessagesPage> {
 
     final result = await ApiService.getConversations();
 
-    print(result);
     if (mounted) {
       setState(() {
         _isLoading = false;

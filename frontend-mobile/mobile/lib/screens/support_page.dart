@@ -74,21 +74,22 @@ class _SupportPageState extends State<SupportPage> {
         children: [
           const SizedBox(height: 20),
           Text(
-            "Friend Connector",
-            style: GoogleFonts.dancingScript(
-              fontSize: 64,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          "Friend Connector",
+          style: GoogleFonts.dancingScript(
+            fontSize: 64,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
           ),
-          Text(
-            "Request Support",
-            style: GoogleFonts.lora(
-              fontSize: 18,
-              fontStyle: FontStyle.italic,
-              color: const Color(0xFFF0EDFF),
-            ),
+        ),
+        Text(
+          "Request Support",
+          style: GoogleFonts.lora(
+            fontSize: 18,
+            fontStyle: FontStyle.italic,
+            color: const Color(0xFFF0EDFF),
           ),
+        ),
           const SizedBox(height: 20),
 
           Expanded(

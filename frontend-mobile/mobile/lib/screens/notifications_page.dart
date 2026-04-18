@@ -133,10 +133,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return SafeArea(
       child: Column(
         children: [
-          const SizedBox(height: 15),
-          Text("Friend Connector", style: GoogleFonts.dancingScript(fontSize: 56, fontWeight: FontWeight.bold, color: Colors.white)),
-          Text("Notifications", style: GoogleFonts.lora(fontSize: 16, fontStyle: FontStyle.italic, color: const Color(0xFFF0EDFF))),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
+                    Text(
+                      "Friend Connector",
+                      style: GoogleFonts.dancingScript(
+                        fontSize: 64,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
+                      ),
+                    ),
+                    Text(
+                      "Notifications",
+                      style: GoogleFonts.lora(
+                        fontSize: 18,
+                        fontStyle: FontStyle.italic,
+                        color: const Color(0xFFF0EDFF),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -147,9 +162,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
               ),
               child: Column(
                 children: [
-                  Text("Stay Updated", style: GoogleFonts.lora(fontSize: 24, fontWeight: FontWeight.bold, color: headerTextBlue)),
-                  const Divider(height: 30, thickness: 1, color: Color(0xFFEEEEEE)),
-                  Expanded(
+                    Text(
+                    "Recent Notifications",
+                    style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF3C3489)),
+                  ),
+                  const SizedBox(height: 20),                  Expanded(
                     child: RefreshIndicator(
                       onRefresh: _loadNotifications,
                       color: headerTextBlue,
