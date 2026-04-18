@@ -14,14 +14,16 @@ interface Notification {
       | 'alert'
       | 'birthday'
       | 'support_received'
-      | 'birthday_wish_received';
+      | 'birthday_wish_received'
+      | 'support_needed';
+  requesterId: string;
   content: string;
   createdAt: string | Date;
   isRead: boolean;
   relatedId: string | null;
   senderUsername?: string;
-  senderFirstName?: string;
-  senderLastName?: string;
+  senderFirstName: string;
+  senderLastName: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -32,6 +34,7 @@ const notificationIcon = (type: Notification['type']): string => {
     case 'birthday':                return '🎂';
     case 'alert':                   return '🤝';
     case 'support_received':        return '💙';
+    case 'support_needed':          return '👋';
     case 'birthday_wish_received':  return '🎉';
     default:                        return '🔔';
   }
@@ -153,6 +156,43 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
                                                              onAccept,
                                                              friendResolved
                                                            }) => {
+
+  const navigate = useNavigate();
+
+  async function openChatWith(friendId: string, fName: string, lName: string): Promise<void> {
+    if (!friendId) {
+      console.error("friendId is missing, cannot open chat");
+      return;
+    }
+
+    try {
+      const token = retrieveToken();
+      const response = await fetch(buildPath('api/conversations'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ friendId: friendId }), // Backend needs this to get/create ConvID
+      });
+
+      const res = await response.json();
+      if (res.error) return;
+
+      if (res.accessToken) storeToken(res.accessToken);
+
+      navigate('/conversation/' + friendId, {
+        state: {
+          name: `${fName} ${lName}`.trim() || "Friend",
+          conversationId: res.conversationId // Passing this prevents an extra API call on the next page
+        }
+      });
+
+    } catch (e) {
+      console.error("Failed to open chat:", e);
+    }
+  }
+
   return (
       <div
           id={`notificationCard-${notification._id}`}
@@ -200,6 +240,27 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               {friendResolved === 'accept' ? 'Friend request accepted' : 'Friend request declined'}
             </p>
         )}
+
+        {notification.type === 'support_needed' && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <div className={styles.actionButtons}>
+                <button
+                    className={styles.acceptBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const idToUse = notification.requesterId || notification._id;
+                      const firstName = notification.senderFirstName || "A";
+                      const lastName = notification.senderLastName || "Friend";
+
+                      openChatWith(idToUse, firstName, lastName);
+                    }}
+                >
+                  Message Friend
+                </button>
+              </div>
+            </div>
+        )}
+
       </div>
   );
 };
@@ -237,6 +298,7 @@ const Notifications: React.FC = () => {
       });
 
       const res = await response.json();
+      console.log(res);
       if (res.accessToken) storeToken(res.accessToken);
 
       if (res.notifications) {
@@ -246,6 +308,30 @@ const Notifications: React.FC = () => {
       console.error("Failed to fetch notifications", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    setNotifications(prev =>
+        prev.map(n => n._id === id ? { ...n, isRead: true } : n)
+    );
+
+    try {
+      const token = retrieveToken();
+      const response = await fetch(buildPath('api/mark-notification-read'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ notificationId: id })
+      });
+
+      const res = await response.json();
+      if (res.accessToken) storeToken(res.accessToken);
+
+    } catch (e) {
+      console.error("Failed to sync read status to server", e);
     }
   };
 
@@ -288,11 +374,7 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-        prev.map(n => n._id === id ? { ...n, isRead: true } : n)
-    );
-  };
+
 
   const handleClick = (notification: Notification) => {
     if (notification.type === 'friend_request') return;

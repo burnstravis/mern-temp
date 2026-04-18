@@ -104,6 +104,7 @@ function Conversation() {
             return;
         }
 
+        // Single source of truth for loading
         loadConversations();
 
         const token = retrieveToken();
@@ -113,10 +114,10 @@ function Conversation() {
 
         const setupSocket = async () => {
             const convId = await getConvId();
-            if (convId) {
-                socketRef.current?.emit('join:conversation', convId);
+            if (convId && socketRef.current) {
+                socketRef.current.emit('join:conversation', convId);
 
-                socketRef.current?.on('message:new', (newMessage: any) => {
+                socketRef.current.on('message:new', (newMessage: any) => {
                     setConversations((prev) => {
                         if (prev.find(m => m._id === newMessage._id)) return prev;
                         return [...prev, {
@@ -130,15 +131,12 @@ function Conversation() {
 
         setupSocket();
 
-        return () => { socketRef.current?.disconnect(); };
+        return () => {
+            socketRef.current?.off('message:new'); // Clean up listener
+            socketRef.current?.disconnect();
+        };
     }, [friendId]);
-    useEffect(() => {
-        if (!_ud) {
-            navigate('/');
-            return;
-        }
-        loadConversations();
-    }, [friendId]);
+
 
     useEffect(() => {
         if (scrollRef.current) {

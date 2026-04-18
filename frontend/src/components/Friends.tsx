@@ -146,12 +146,10 @@ function Friends() {
                 storeToken(res.accessToken);
             }
 
-            // Navigate to the conversation page using the ID of the friend
-            // Your Conversation page will use this friendId to fetch messages
             navigate('/conversation/' + friend._id, {
                 state: {
                     name: `${friend.firstName} ${friend.lastName}`,
-                    conversationId: res.conversationId // Passing this via state saves an API call on the next page
+                    conversationId: res.conversationId
                 }
             });
 

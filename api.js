@@ -889,16 +889,21 @@ exports.setApp = function (app, client, io) {
 
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const userId = new ObjectId(decoded.id);
-            const userFirstName = decoded?.firstName || "A friend";
+
+            // 1. Pull both names from the decoded JWT
+            const userFirstName = decoded?.firstName || "A";
+            const userLastName = decoded?.lastName || "Friend";
+            const fullName = `${userFirstName} ${userLastName}`.trim();
+
             const db = client.db('large_project');
 
             const now = new Date();
-            const expiresAt = new Date(now.getTime() + (24 * 60 * 60 * 1000)); 
+            const expiresAt = new Date(now.getTime() + (24 * 60 * 60 * 1000));
 
             const newRequest = {
                 userId: userId,
                 content: content,
-                type: type, 
+                type: type,
                 createdAt: now,
                 expiresAt: expiresAt
             };
@@ -915,8 +920,11 @@ exports.setApp = function (app, client, io) {
                     const friendId = f.requesterId.equals(userId) ? f.recipientId : f.requesterId;
                     return {
                         recipientId: friendId,
+                        senderId: userId, // Better name than requesterId for a notification
+                        senderFirstName: userFirstName, // Storing these helps the frontend
+                        senderLastName: userLastName,
                         type: 'support_needed',
-                        content: `${userFirstName} needs some ${type}!`,
+                        content: `${fullName} needs some ${type}!`,
                         createdAt: new Date(),
                         isRead: false,
                         relatedId: result.insertedId
@@ -924,7 +932,7 @@ exports.setApp = function (app, client, io) {
                 });
                 await db.collection('notifications').insertMany(friendNotifications);
             }
-            
+
             const refreshed = tokenHandler.refresh(jwtToken);
 
             res.status(200).json({
@@ -1000,6 +1008,28 @@ exports.setApp = function (app, client, io) {
         }
         catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
+        }
+    });
+
+    app.post('/api/mark-notification-read', async (req, res) => {
+        const { notificationId } = req.body;
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) return res.status(401).json({ error: "No token." });
+
+        try {
+            if (jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
+            const db = client.db('large_project');
+
+            await db.collection('notifications').updateOne(
+                { _id: new ObjectId(notificationId) },
+                { $set: { isRead: true } }
+            );
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({ success: true, accessToken: refreshed.accessToken });
+        } catch (e) {
+            res.status(500).json({ error: e.toString() });
         }
     });
 

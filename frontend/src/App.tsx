@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './App.css';
 import LoginPage from './pages/LoginPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
-import CardPage from './pages/CardPage.tsx';
 import RegisterPage from "./pages/RegisterPage.tsx";
 import NotificationPage from "./pages/NotificationPage.tsx";
 import LandingPage from "./pages/LandingPage.tsx";
@@ -42,7 +41,6 @@ function App() {
             <Route path="/resetPassword" element={<ResetPasswordPage />} />
             <Route element={<ProtectedRoute />}>
                 <Route path="/notifications" element={<NotificationPage />} />
-                <Route path="/cards" element={<CardPage />} />
                 <Route path="/conversation/:friendId" element={<ConversationPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/home" element={<HomePage />} />
