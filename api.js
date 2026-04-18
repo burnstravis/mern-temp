@@ -402,6 +402,7 @@ exports.setApp = function (app, client) {
 
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const requesterId = decoded?.id;
+            const requesterFirstName = decoded?.firstName;
 
             if (!requesterId) {
                 ret = { error: 'Invalid token payload.', accessToken: '' };
@@ -439,7 +440,7 @@ exports.setApp = function (app, client) {
                 return res.status(200).json(ret);
             }
 
-            await db.collection('friendships').insertOne({
+            const friendshipResult = await db.collection('friendships').insertOne({
                 requesterId: requesterObjectId,
                 recipientId: recipientObjectId,
                 status: 'pending'
