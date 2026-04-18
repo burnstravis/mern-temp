@@ -359,4 +359,127 @@ class ApiService {
       return null;
     }
   }
+
+  static Future<Map<String, dynamic>> getNotifications() async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      await _updateSession(data);
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> markNotificationRead(String notificationId) async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/mark-notification-read'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'notificationId': notificationId}),
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      await _updateSession(data);
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createSupportRequest(String content, String type) async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/support-requests'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'content': content,
+          'type': type,
+        }),
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      await _updateSession(data);
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getSupportRequests({String? type}) async {
+    try {
+      final token = await TokenManager.getToken();
+      final uri = Uri.parse('$_baseUrl/support-requests').replace(
+        queryParameters: type != null ? {'type': type} : {},
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      await _updateSession(data);
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+
+  static Future<Map<String, dynamic>> getRandomPrompt() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/return-random-prompt'));
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> acceptFriendRequest(String senderId, String friendshipId) async {
+    try {
+      final token = await TokenManager.getToken();
+      if (token == null) return {'error': 'No token found'};
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/accept-friend-request'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'senderId': senderId,
+          'friendship_id': friendshipId,
+        }),
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      // Handle sliding session if token is returned
+      await _updateSession(data);
+
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
 }

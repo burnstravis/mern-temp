@@ -459,7 +459,7 @@ exports.setApp = function (app, client, io) {
 
         if (jwtToken && jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
         if (!jwtToken || (!senderId && !friendship_id)) {
-            return res.status(400).json({ error: 'Missing data or token.' });
+            return res.status(400).json({ error: 'Friendship ID and token are required.' });
         }
 
         try {
@@ -620,13 +620,14 @@ exports.setApp = function (app, client, io) {
     });
 
     app.post('/api/notifications', async (req, res) => {
-
         let jwtToken = req.headers['authorization'];
+        if (jwtToken && jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
 
-        const{type, content, relatedId} = req.body;
+        // Extract recipientId from the body so we know who to notify
+        const { recipientId, type, content, relatedId } = req.body;
 
-        if (!jwtToken || !type || !content) {
-            return res.status(400).json({ error: 'Token, type, and content are required.', accessToken: '' });
+        if (!jwtToken || !type || !content || !recipientId) {
+            return res.status(400).json({ error: 'Token, recipient, type, and content are required.', accessToken: '' });
         }
 
         try {
@@ -634,26 +635,19 @@ exports.setApp = function (app, client, io) {
                 return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
             }
 
-        const db = client.db('large_project');
+            const db = client.db('large_project');
 
-        const decoded = require('jsonwebtoken').decode(jwtToken);
-        const recipientId = decoded?.id;
+            await db.collection('notifications').insertOne({
+                recipientId: new ObjectId(recipientId), // Use the ID passed in the request body
+                type: type,
+                content: content,
+                createdAt: new Date(),
+                isRead: false,
+                relatedId: relatedId ? new ObjectId(relatedId) : null
+            });
 
-        if (!recipientId) {
-            return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
-        }
-
-        await db.collection('notifications').insertOne({
-            recipientId: new ObjectId(recipientId),
-            type: type,
-            content: content,
-            createdAt: new Date(),
-            isRead: false,
-            relatedId: relatedId ? new ObjectId(relatedId) : null
-        });
-
-        const refreshed = tokenHandler.refresh(jwtToken);
-        res.status(200).json({ error: '', accessToken: refreshed.accessToken });
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({ error: '', accessToken: refreshed.accessToken });
         } catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }

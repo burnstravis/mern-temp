@@ -729,7 +729,7 @@ describe('POST /api/friends', () => {
             .send({ username: 'jane' });
 
         expect(res.status).toBe(200);
-        expect(res.body.error).toBe('Friend already exists.');
+        expect(res.body.error).toBe('Friend already exists or is pending.');
     });
 
     it('returns 200 and success message on successful friend request', async () => {

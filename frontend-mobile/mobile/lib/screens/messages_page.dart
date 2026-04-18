@@ -69,6 +69,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
     final result = await ApiService.getConversations();
 
+    print(result);
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -145,7 +146,7 @@ class _MessagesPageState extends State<MessagesPage> {
               child: Column(
                 children: [
                   Text(
-                    "Inbox",
+                    "Messages",
                     style: GoogleFonts.lora(
                       fontSize: 32,
                       fontStyle: FontStyle.italic,

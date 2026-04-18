@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 //import { buildPath } from './path';
-import {retrieveToken} from '../tokenStorage';
+import {retrieveToken, storeToken} from '../tokenStorage';
 import styles from '../pages/AddFriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
 import {buildPath} from "./path.ts";
@@ -79,24 +79,32 @@ function AddFriends() {
             const token = retrieveToken();
             if (!token) return;
 
-            // Get your own data to put your name in the notification
             const _ud = localStorage.getItem('user_data');
             const ud = _ud ? JSON.parse(_ud) : {};
-            const myName = ud.firstName + " " + ud.lastName || "A user";
+            // Use a fallback for names if they aren't in local storage
+            const myName = (ud.firstName && ud.lastName)
+                ? `${ud.firstName} ${ud.lastName}`
+                : "Someone";
 
-            await fetch(buildPath('api/notifications'), {
+            const response = await fetch(buildPath('api/notifications'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    recipientId: targetUserId,
+                    recipientId: targetUserId, // Now correctly utilized by the backend
                     type: 'friend_request',
                     content: `${myName} sent you a friend request!`,
                     relatedId: friendshipId
                 })
             });
+
+            const res = await response.json();
+
+            if (res.accessToken) {
+                storeToken(res.accessToken);
+            }
 
         } catch (e) {
             console.error("Error sending notification:", e);

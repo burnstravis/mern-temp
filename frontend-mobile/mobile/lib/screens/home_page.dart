@@ -7,6 +7,8 @@ import '../services/api_service.dart';
 import 'messages_page.dart';
 import 'friends_page.dart';
 import 'conversation_page.dart';
+import 'notifications_page.dart';
+import 'support_page.dart';
 
 class HomePage extends StatefulWidget {
   final String firstName;
@@ -45,6 +47,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _navigateToConversation(String convId, String name, int returnIndex) {
+
+    setState(() {
+      _activeConversationId = convId;
+      _activeFriendName = name;
+      _lastIndex = returnIndex; // Stores where we came from (e.g., index 4 for Alerts)
+      _selectedIndex = 6;       // Switches view to the ConversationPage
+    });
+  }
+
   void _doLogout() {
     Navigator.of(context).pushReplacementNamed('/');
   }
@@ -54,6 +66,8 @@ class _HomePageState extends State<HomePage> {
     final EdgeInsets safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: homeWrapperBg,
       body: Stack(
         children: [
@@ -125,7 +139,7 @@ class _HomePageState extends State<HomePage> {
           _buildNavItem(2, CupertinoIcons.person_2_fill, "Friends"),
           _buildNavItem(3, CupertinoIcons.compass_fill, "Discover"),
           _buildNavItem(4, CupertinoIcons.bell_fill, "Alerts"),
-          _buildNavItem(5, CupertinoIcons.settings_solid, "Settings"),
+          _buildNavItem(5, CupertinoIcons.envelope_open_fill, "Support"),
         ],
       ),
     );
@@ -172,34 +186,29 @@ class _HomePageState extends State<HomePage> {
       case 0: return _buildHomeView();
       case 1:
         return MessagesPage(
-          onOpenChat: (convId, name) {
-            setState(() {
-              _activeConversationId = convId;
-              _activeFriendName = name;
-              _lastIndex = 1;
-              _selectedIndex = 6;
-            });
-          },
+          onOpenChat: (convId, name) => _navigateToConversation(convId, name, 1),
         );
       case 2:
         return FriendsPage(
-          onOpenChat: (convId, name) {
-            setState(() {
-              _activeConversationId = convId;
-              _activeFriendName = name;
-              _lastIndex = 2;
-              _selectedIndex = 6;
-            });
-          },
+          onOpenChat: (convId, name) => _navigateToConversation(convId, name, 2),
         );
       case 3: return const DiscoverPage();
-      case 4: return const Center(child: Text("Notifications", style: TextStyle(color: Colors.white)));
-      case 5: return _buildSettingsView();
-      case 6:
+      case 4:
+        if (_currentUserId == null || _currentUserId!.isEmpty) {
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
+        }
+        return NotificationsPage(
+          currentUserId: _currentUserId!,
+          onOpenChat: (convId, name) => _navigateToConversation(convId, name, 4),
+        );
+        case 5: return SupportPage(firstName: widget.firstName);
+        case 6:
         if (_currentUserId == null || _currentUserId!.isEmpty) {
           return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
         return ConversationPage(
+          // THIS KEY IS CRITICAL - it resets the state of the chat page
+          key: UniqueKey(),
           conversationId: _activeConversationId ?? "",
           currentUserId: _currentUserId!,
           displayName: _activeFriendName ?? "Friend",
@@ -243,32 +252,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSettingsView() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 80),
-            Text("Settings", style: GoogleFonts.lora(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
-            const Divider(color: Colors.white24, height: 40),
-            _settingsTile(Icons.person_outline, "Account Info"),
-            _settingsTile(Icons.notifications_none, "Push Notifications"),
-            _settingsTile(Icons.lock_outline, "Privacy & Security"),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _settingsTile(IconData icon, String title) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Colors.white70),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white24),
-      onTap: () {},
-    );
-  }
 }

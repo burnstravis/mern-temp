@@ -34,7 +34,7 @@ const Support = () => {
 
             const res = await response.json();
             if (res.requestId) {
-                alert("Your flare has been sent to all your friends!");
+                alert("Your request has been sent to all your friends!");
                 setContent('');
             }
         } catch (e) {

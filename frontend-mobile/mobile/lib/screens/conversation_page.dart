@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../services/api_service.dart';
+import '../services/token_manager.dart';
 import 'dart:async';
 
 class ConversationPage extends StatefulWidget {
@@ -25,34 +27,54 @@ class _ConversationPageState extends State<ConversationPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  late IO.Socket _socket;
   List<dynamic> _messages = [];
   bool _isLoading = true;
-  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchMessages();
-    // Start polling for new messages every 3 seconds
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) => _fetchMessages());
+    _initSocket();
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    _socket.emit('leave:conversation', widget.conversationId);
+    _socket.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _initSocket() {
+    // Connect to your server (Use 10.0.2.2 for Android Emulator)
+    _socket = IO.io('http://10.0.2.2:5000', IO.OptionBuilder()
+        .setTransports(['websocket'])
+        .setAuth({'token': TokenManager.getToken()})
+        .enableAutoConnect()
+        .build());
+
+    _socket.onConnect((_) {
+      debugPrint('Connected to WebSocket');
+      _socket.emit('join:conversation', widget.conversationId);
+    });
+
+    _socket.on('message:new', (newMessage) {
+      if (mounted) {
+        setState(() {
+          // Check for duplicates and insert at start for reverse ListView
+          if (!_messages.any((m) => m['_id'] == newMessage['_id'])) {
+            _messages.insert(0, newMessage);
+          }
+        });
+      }
+    });
+  }
+
   Future<void> _fetchMessages() async {
-    if (widget.currentUserId.isEmpty || widget.conversationId.isEmpty) {
-      print("Waiting for IDs... User: '${widget.currentUserId}', Conv: '${widget.conversationId}'");
+    if (widget.currentUserId.isEmpty || widget.conversationId.isEmpty) return;
 
-      return;
-    }
-
-    // 2. Call the API
     final result = await ApiService.getMessages(
       senderID: widget.currentUserId,
       conversationID: widget.conversationId,
@@ -61,16 +83,8 @@ class _ConversationPageState extends State<ConversationPage> {
     if (mounted) {
       setState(() {
         _isLoading = false;
-
         if ((result['error'] == null || result['error'] == "") && result.containsKey('messages')) {
-
           _messages = List.from(result['messages'].reversed);
-
-        } else {
-          print("API Error or Missing Data: ${result['error']}");
-
-          if (result['error'].toString().contains("JWT")) {
-          }
         }
       });
     }
@@ -82,6 +96,7 @@ class _ConversationPageState extends State<ConversationPage> {
 
     _messageController.clear();
 
+    // 1. Send to API
     final result = await ApiService.sendMessage(
       senderID: widget.currentUserId,
       conversationID: widget.conversationId,
@@ -93,7 +108,22 @@ class _ConversationPageState extends State<ConversationPage> {
         SnackBar(content: Text(result['error'])),
       );
     } else {
-      _fetchMessages();
+      // 2. MANUALLY UPDATE UI (If socket doesn't loop back to you)
+      // We create a temporary message object to show it immediately
+      if (mounted) {
+        setState(() {
+          final myNewMsg = {
+            '_id': DateTime.now().toString(), // Temp ID
+            'text': text,
+            'senderId': widget.currentUserId,
+            'createdAt': DateTime.now().toIso8601String(),
+          };
+
+          if (!_messages.any((m) => m['text'] == text && m['senderId'] == widget.currentUserId)) {
+            _messages.insert(0, myNewMsg);
+          }
+        });
+      }
     }
   }
 
@@ -200,10 +230,11 @@ class _ConversationPageState extends State<ConversationPage> {
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final msg = _messages[index];
+        final bool isMe = msg['senderId'] == widget.currentUserId;
 
         return _chatBubble(
             msg['text'] ?? "",
-            msg['fromSender'] ?? false,
+            isMe,
             _formatTime(msg['createdAt'])
         );
       },
