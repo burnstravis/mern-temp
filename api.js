@@ -6,7 +6,21 @@ const { Resend } = require('resend');
 const crypto = require('crypto');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-exports.setApp = function (app, client) {
+exports.setApp = function (app, client, io) {
+
+    const emitMessageEvent = (conversationId, payload) => {
+        if (!io || !conversationId) return;
+        io.to(`conversation:${conversationId}`).emit('message:new', payload);
+    };
+
+    const emitConversationEvent = (participantIds, payload) => {
+        if (!io || !Array.isArray(participantIds)) return;
+
+        participantIds.forEach((participantId) => {
+            if (!participantId) return;
+            io.to(`user:${participantId.toString()}`).emit('conversation:updated', payload);
+        });
+    };
 
     app.post('/api/register', async (req, res) => {
         const { firstName, lastName, email, username, password, birthday} = req.body;
@@ -447,7 +461,7 @@ exports.setApp = function (app, client) {
             });
 
             await db.collection('notifications').insertOne({
-                recipientid: recipientObjectId,
+                recipientId: recipientObjectId,
                 type: 'friend_request',
                 content: `${requesterFirstName} sent you a friend request.`,
                 createdAt: new Date(),
@@ -499,7 +513,7 @@ exports.setApp = function (app, client) {
             }
 
             const userObjectId = new ObjectId(userId);
-            const friendshipObjectId = new ObjectId(friendship_id);
+            const friendshipObjectId = new ObjectId(friendshipId);
 
             const friendship = await db.collection('friendships').findOne({ 
                 _id: friendshipObjectId, 
@@ -558,20 +572,38 @@ exports.setApp = function (app, client) {
             const senderObjectId = new ObjectId(senderID);
             const conversationObjectId = new ObjectId(conversationID);
 
-            await db.collection('messages').insertOne({
+            const createdAt = new Date();
+
+            const messageInsert = await db.collection('messages').insertOne({
                 conversationId: conversationID,
                 senderId: senderID,
                 text: message,
-                createdAt: new Date()
+                createdAt: createdAt
             });
 
             await db.collection('conversations').updateOne(
                 { _id: conversationObjectId },
-                { $set: { lastMessage: message, lastMessageAt: new Date() } }
+                { $set: { lastMessage: message, lastMessageAt: createdAt } }
             );
+
+            const createdMessage = {
+                _id: messageInsert.insertedId.toString(),
+                conversationId: conversationID,
+                senderId: senderID,
+                text: message,
+                createdAt,
+                fromSender: true
+            };
 
             const convo = await db.collection('conversations').findOne({ _id: conversationObjectId });
             if (convo) {
+                emitMessageEvent(conversationID, createdMessage);
+                emitConversationEvent(convo.participants, {
+                    conversationId: conversationID,
+                    lastMessage: message,
+                    lastMessageAt: createdAt
+                });
+
                 const recipientId = convo.participants.find(p => p.toString() !== senderObjectId.toString());
                 if (recipientId) {
                     const sender = await db.collection('users').findOne({ _id: senderObjectId });
@@ -587,7 +619,7 @@ exports.setApp = function (app, client) {
             }
 
             const refreshed = tokenHandler.refresh(jwtToken);
-            res.status(200).json({ error: '', accessToken: refreshed.accessToken });
+            res.status(200).json({ error: '', message: createdMessage, accessToken: refreshed.accessToken });
         } catch (e) {
             res.status(500).json({ error: e.toString(), accessToken: '' });
         }
@@ -597,7 +629,8 @@ exports.setApp = function (app, client) {
         
         let jwtToken = req.headers['authorization'];
         
-        const { senderID, conversationID } = req.body;
+        const senderID = req.query.senderID || req.body?.senderID;
+        const conversationID = req.query.conversationID || req.body?.conversationID;
 
         if (!senderID || !conversationID|| !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
@@ -658,7 +691,7 @@ exports.setApp = function (app, client) {
         }
 
         await db.collection('notifications').insertOne({
-            recipientid: new ObjectId(recepientId),
+            recipientId: new ObjectId(recepientId),
             type: type,
             content: content,
             createdAt: new Date(),
@@ -699,9 +732,8 @@ exports.setApp = function (app, client) {
 
         const userObjectId = new ObjectId(userId);
 
-        // 1. Fetch all notifications for this user (sorted by newest first)
         const notifications = await db.collection('notifications')
-            .find({ recipientId: userObjectId }) // Use recipientId if you standardized to camelCase
+            .find({ recipientId: userObjectId })
             .sort({ createdAt: -1 })
             .toArray();
 
@@ -939,17 +971,6 @@ exports.setApp = function (app, client) {
         }
     });
 
-    app.get('/api/return-random-prompt', async (req, res) => {
-        try {
-            const db = client.db('large_project');
-            const prompts = await db.collection('prompts').find().toArray();
-            if (!prompts.length) return res.status(404).json({ error: 'No prompts' });
-            res.status(200).json({ prompt: prompts[crypto.randomInt(0, prompts.length)] });
-        } catch (e) { 
-            res.status(500).json({ error: e.toString() }); 
-        }
-    });
-
     app.get('/api/receive-notification', async (req, res) => {
 
         let jwtToken = req.headers['authorization'];
@@ -973,7 +994,7 @@ exports.setApp = function (app, client) {
             }
 
             const notifications = await db.collection('notifications').find({
-                recipientid: new ObjectId(recepientId),
+                recipientId: new ObjectId(recepientId),
                 isRead: false
             }).toArray();
 
