@@ -30,11 +30,13 @@ class _ConversationPageState extends State<ConversationPage> {
   late IO.Socket _socket;
   List<dynamic> _messages = [];
   bool _isLoading = true;
+  String _prompt = "Loading...";
 
   @override
   void initState() {
     super.initState();
     _fetchMessages();
+    _fetchPrompt();
     _initSocket();
   }
 
@@ -127,6 +129,20 @@ class _ConversationPageState extends State<ConversationPage> {
     }
   }
 
+  Future<void> _fetchPrompt() async {
+    final result = await ApiService.getRandomPrompt();
+    if (mounted) {
+      setState(() {
+        if (result.containsKey('prompt')) {
+          final promptData = result['prompt'];
+          _prompt = promptData['content'] ?? promptData['text'] ?? "No prompt today!";
+        } else {
+          _prompt = "Click here to start the conversation!";
+        }
+      });
+    }
+  }
+
   String _formatTime(String? isoDate) {
     if (isoDate == null) return "";
     final date = DateTime.parse(isoDate).toLocal();
@@ -208,12 +224,36 @@ class _ConversationPageState extends State<ConversationPage> {
 
   Widget _buildPromptBox() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF0A500), borderRadius: BorderRadius.circular(20)),
-      child: const Row(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0A500),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center, // Centers the "box" content
         children: [
-          Text("Today's Prompt: ", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
-          Expanded(child: Text("if you were a ghost, how would you mildly inconvenience people?", style: TextStyle(fontStyle: FontStyle.italic))),
+          Text(
+            "Today's Prompt",
+            textAlign: TextAlign.center, // Centers the text lines if they wrap
+            style: GoogleFonts.lora(
+              fontWeight: FontWeight.bold,
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 6), // Space between header and prompt
+          Text(
+            _prompt,
+            textAlign: TextAlign.center, // Ensures long prompts wrap centered
+            style: GoogleFonts.lora(
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+              color: Colors.black.withOpacity(0.85),
+            ),
+          ),
         ],
       ),
     );

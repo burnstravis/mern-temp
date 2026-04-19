@@ -1,6 +1,6 @@
 import { buildPath } from './path';
 import { retrieveToken, storeToken } from '../tokenStorage';
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import styles from '../pages/ConversationsPage.module.css'
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
@@ -11,10 +11,12 @@ function Conversation() {
     const { friendId } = useParams();
     const { state } = useLocation();
 
+    const hasFetched = useRef(false);
     const [conversations, setConversations] = useState<any[]>([]);
     const [message, setMessage] = useState('');
     const [inputText, setInputText] = useState(''); // Track typing
     const [loading, setLoading] = useState(false);
+    const [prompt, setPrompt] = useState('');
     const scrollRef = useRef<HTMLDivElement>(null); // Create the ref
     const socketRef = useRef<Socket | null>(null); // To store the socket instance
 
@@ -98,6 +100,27 @@ function Conversation() {
         }
     }
 
+    const fetchRandomPrompt = useCallback(async () => {
+        try {
+            const token = retrieveToken();
+            const response = await fetch(buildPath('api/return-random-prompt'), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok && data.prompt) {
+                const promptText = data.prompt.content || data.prompt.text || "No prompt today!";
+                setPrompt(promptText);
+            }
+        } catch (error) {
+            console.error("Network error:", error);
+        }
+    }, []);
+
     useEffect(() => {
         if (!_ud) {
             navigate('/');
@@ -106,6 +129,11 @@ function Conversation() {
 
         // Single source of truth for loading
         loadConversations();
+        if(hasFetched.current) return;
+        hasFetched.current = true;
+
+        loadConversations();
+        fetchRandomPrompt();
 
         const token = retrieveToken();
         socketRef.current = io(buildPath(""), {
@@ -134,6 +162,7 @@ function Conversation() {
         return () => {
             socketRef.current?.off('message:new'); // Clean up listener
             socketRef.current?.disconnect();
+            hasFetched.current = false;
         };
     }, [friendId]);
 
@@ -143,6 +172,7 @@ function Conversation() {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [conversations, loading]);
+
 
     return (
         <div className={styles.conversationView}>
@@ -164,10 +194,9 @@ function Conversation() {
                 <>
                     <div className={styles.conversationHeader}>
                         <h1 className={styles.messageReceiverName}>{friendFullName}</h1>
-                        {/* Prompt section remains visible in the chat view */}
                         <div className={styles.todaysPrompt}>
                             <p id={styles.promptHeader}>Today's Prompt</p>
-                            <p id={styles.promptMessage}>"if you were a ghost, how would you mildly inconvenience people?"</p>
+                            <p id={styles.promptMessage}>{prompt}</p>
                         </div>
                     </div>
 
