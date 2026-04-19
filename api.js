@@ -427,7 +427,7 @@ exports.setApp = function (app, client, io) {
             });
 
             if (existing) {
-                ret = { error: 'Friendship already exists or is pending.', accessToken: '' };
+                ret = { error: 'Friend already exists or is pending.', accessToken: '' };
                 return res.status(200).json(ret);
             }
 
@@ -462,6 +462,11 @@ exports.setApp = function (app, client, io) {
             return res.status(400).json({ error: 'Friendship ID and token are required.' });
         }
 
+
+        if (tokenHandler.isExpired(jwtToken)) {
+            return res.status(200).json({ error: 'The JWT is no longer valid', accessToken: '' });
+        }
+
         try {
             const decoded = require('jsonwebtoken').decode(jwtToken);
             const myId = new ObjectId(decoded.id);
@@ -483,7 +488,7 @@ exports.setApp = function (app, client, io) {
             );
 
             if (result.matchedCount === 0) {
-                return res.status(404).json({ error: "No pending request found for you to accept." });
+                return res.status(400).json({ error: "Friend request not found or already accepted." });
             }
 
             await db.collection('notifications').deleteOne({

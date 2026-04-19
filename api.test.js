@@ -843,7 +843,7 @@ describe('POST /api/notifications', () => {
             .send({ type: 'friend_request', content: 'Hello' });
 
         expect(res.status).toBe(400);
-        expect(res.body.error).toBe('Token, type, and content are required.');
+        expect(res.body.error).toBe('Token, recipient, type, and content are required.');
     });
 
     it('returns 400 when type is missing', async () => {
@@ -855,7 +855,7 @@ describe('POST /api/notifications', () => {
             .send({ content: 'Hello' });
 
         expect(res.status).toBe(400);
-        expect(res.body.error).toBe('Token, type, and content are required.');
+        expect(res.body.error).toBe('Token, recipient, type, and content are required.');
     });
 
     it('returns 400 when content is missing', async () => {
@@ -867,7 +867,7 @@ describe('POST /api/notifications', () => {
             .send({ type: 'friend_request' });
 
         expect(res.status).toBe(400);
-        expect(res.body.error).toBe('Token, type, and content are required.');
+        expect(res.body.error).toBe('Token, recipient, type, and content are required.');
     });
 
     it('returns 200 and empty error on successful notification creation', async () => {
@@ -876,7 +876,11 @@ describe('POST /api/notifications', () => {
         const res = await request(app)
             .post('/api/notifications')
             .set('Authorization', MOCK_TOKEN)
-            .send({ type: 'friend_request', content: 'Jane sent you a friend request.' });
+            .send({
+                recipientId: MOCK_USER_ID,
+                type: 'friend_request',
+                content: 'Jane sent you a friend request.'
+            });
 
         expect(res.status).toBe(200);
         expect(res.body.error).toBe('');
@@ -890,7 +894,11 @@ describe('POST /api/notifications', () => {
         const res = await request(app)
             .post('/api/notifications')
             .set('Authorization', MOCK_TOKEN)
-            .send({ type: 'friend_request', content: 'Hello' });
+            .send({
+                recipientId: MOCK_USER_ID,
+                type: 'friend_request',
+                content: 'Hello'
+            });
 
         expect(res.status).toBe(200);
         expect(res.body.error).toBe('The JWT is no longer valid');
@@ -931,7 +939,7 @@ describe('POST /api/accept-friend-request', () => {
         const res = await request(app)
             .post('/api/accept-friend-request')
             .set('Authorization', MOCK_TOKEN)
-            .send({ friendshipId: '617f1f77bcf86cd799439022' });
+            .send({ friendship_id: '617f1f77bcf86cd799439022' });
 
         expect(res.status).toBe(200);
         expect(res.body.error).toBe('The JWT is no longer valid');
@@ -949,23 +957,19 @@ describe('POST /api/accept-friend-request', () => {
             .send({ friendshipId: '617f1f77bcf86cd799439022' });
 
         expect(res.status).toBe(400);
-        expect(res.body.error).toBe('Friend request not found or already accepted.');
+        expect(res.body.error).toBe('Friendship ID and token are required.');
     });
 
     it('returns 200 and success message when friend request is accepted', async () => {
         const requesterId = new ObjectId('617f1f77bcf86cd799439022');
+        const friendshipId = '717f1f77bcf86cd799439033';
+
         const client = buildMockClient({
             friendships: {
-                findOne:  jest.fn().mockResolvedValue({
-                    _id: new ObjectId('717f1f77bcf86cd799439033'),
-                    requesterId: requesterId,
-                    recipientId: new ObjectId(MOCK_USER_ID),
-                    status: 'pending'
-                }),
-                updateOne: jest.fn().mockResolvedValue({})
+                updateOne: jest.fn().mockResolvedValue({ matchedCount: 1 })
             },
             notifications: {
-                insertOne: jest.fn().mockResolvedValue({})
+                deleteOne: jest.fn().mockResolvedValue({ deletedCount: 1 })
             }
         });
         const app = buildApp(client);
@@ -973,11 +977,10 @@ describe('POST /api/accept-friend-request', () => {
         const res = await request(app)
             .post('/api/accept-friend-request')
             .set('Authorization', MOCK_TOKEN)
-            .send({ friendshipId: '717f1f77bcf86cd799439033' });
+            .send({ friendship_id: friendshipId });
 
         expect(res.status).toBe(200);
-        expect(res.body.error).toBe('');
-        expect(res.body.message).toBe('Friend request accepted.');
+        expect(res.body.message).toBe('Friend request accepted and notification removed!');
         expect(res.body.accessToken).toBe('refreshed-token');
     });
 });
@@ -1238,12 +1241,22 @@ describe('GET /api/conversations', () => {
 
     it('returns 200 with conversations list on success', async () => {
         const mockConversations = [
-            { _id: 'c1', participants: [MOCK_USER_ID, '617f1f77bcf86cd799439022'], lastMessage: 'Hey!' }
+            {
+                _id: 'c1',
+                participants: [MOCK_USER_ID, '617f1f77bcf86cd799439022'],
+                lastMessage: 'Hey!',
+                otherUser: {
+                    firstName: 'Jane',
+                    lastName: 'Doe',
+                    username: 'janedoe'
+                }
+            }
         ];
+
         const client = buildMockClient({
             conversations: {
-                find: jest.fn(() => ({
-                    sort:    jest.fn().mockReturnThis(),
+                // API calls .aggregate(), not .find()
+                aggregate: jest.fn(() => ({
                     toArray: jest.fn().mockResolvedValue(mockConversations)
                 }))
             }
@@ -1257,14 +1270,14 @@ describe('GET /api/conversations', () => {
         expect(res.status).toBe(200);
         expect(res.body.conversations).toHaveLength(1);
         expect(res.body.conversations[0].lastMessage).toBe('Hey!');
+        expect(res.body.conversations[0].otherUser.username).toBe('janedoe');
         expect(res.body.accessToken).toBe('refreshed-token');
     });
 
     it('returns 200 with empty list when no conversations exist', async () => {
         const client = buildMockClient({
             conversations: {
-                find: jest.fn(() => ({
-                    sort:    jest.fn().mockReturnThis(),
+                aggregate: jest.fn(() => ({
                     toArray: jest.fn().mockResolvedValue([])
                 }))
             }
