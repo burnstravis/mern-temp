@@ -71,7 +71,12 @@ describe('Notifications Page Unit Tests', () => {
 
         global.fetch.mockResolvedValueOnce({
             ok: true,
-            json: async () => ({}),
+            json: async () => ({ message: 'Success' }),
+        });
+
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ status: 'success' }),
         });
 
         render(

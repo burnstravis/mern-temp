@@ -298,7 +298,6 @@ const Notifications: React.FC = () => {
       });
 
       const res = await response.json();
-      console.log(res);
       if (res.accessToken) storeToken(res.accessToken);
 
       if (res.notifications) {
