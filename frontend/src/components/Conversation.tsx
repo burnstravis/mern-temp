@@ -92,9 +92,17 @@ function Conversation() {
             });
 
             const res = await response.json();
+
+            if (response.ok && res.newMessage) {
+                setConversations((prev) => [
+                    ...prev,
+                    { ...res.newMessage, fromSender: true }
+                ]);
+                setInputText('');
+            }
+
             if (res.accessToken) storeToken({ accessToken: res.accessToken });
 
-            setInputText('');
         } catch (e) {
             console.error("Send error", e);
         }
@@ -127,44 +135,40 @@ function Conversation() {
             return;
         }
 
-        // Single source of truth for loading
-        loadConversations();
-        if(hasFetched.current) return;
+        if (hasFetched.current) return;
         hasFetched.current = true;
 
         loadConversations();
         fetchRandomPrompt();
 
         const token = retrieveToken();
-        socketRef.current = io(buildPath(""), {
-            auth: { token }
+        const socket = io(buildPath(""), { auth: { token } });
+        socketRef.current = socket;
+
+        socket.on('connect', async () => {
+            const convId = await getConvId();
+            if (convId) {
+                socket.emit('join:conversation', convId);
+            }
         });
 
-        const setupSocket = async () => {
-            const convId = await getConvId();
-            if (convId && socketRef.current) {
-                socketRef.current.emit('join:conversation', convId);
+        socket.on('message:new', (newMessage: any) => {
+            setConversations((prev) => {
+                if (prev.some(m => m._id === newMessage._id)) return prev;
 
-                socketRef.current.on('message:new', (newMessage: any) => {
-                    setConversations((prev) => {
-                        if (prev.find(m => m._id === newMessage._id)) return prev;
-                        return [...prev, {
-                            ...newMessage,
-                            fromSender: newMessage.senderId === userId
-                        }];
-                    });
-                });
-            }
-        };
-
-        setupSocket();
+                return [...prev, {
+                    ...newMessage,
+                    fromSender: newMessage.senderId === userId || newMessage.senderID === userId
+                }];
+            });
+        });
 
         return () => {
-            socketRef.current?.off('message:new'); // Clean up listener
-            socketRef.current?.disconnect();
+            socket.off('message:new');
+            socket.disconnect();
             hasFetched.current = false;
         };
-    }, [friendId]);
+    }, [friendId]); // Re-run when switching friends
 
 
     useEffect(() => {
