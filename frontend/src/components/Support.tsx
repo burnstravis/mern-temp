@@ -7,6 +7,7 @@ import {retrieveToken} from "../tokenStorage.ts";
 const Support = () => {
     const navigate = useNavigate();
     const [content, setContent] = useState('');
+    const[message, setMessage] = useState('');
     const [type, setType] = useState('Encouragement');
 
     const _ud = localStorage.getItem('user_data');
@@ -34,7 +35,7 @@ const Support = () => {
 
             const res = await response.json();
             if (res.requestId) {
-                alert("Your request has been sent to all your friends!");
+                setMessage("Your request has been sent to all your friends!");
                 setContent('');
             }
         } catch (e) {
@@ -80,6 +81,7 @@ const Support = () => {
                     Send to friends
                 </button>
             </div>
+            <p>{message}</p>
         </div>
     );
 }

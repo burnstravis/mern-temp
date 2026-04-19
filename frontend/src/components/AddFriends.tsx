@@ -151,7 +151,6 @@ function AddFriends() {
 
     const handleSearch = () => {
         setMessage('');
-        searchUsers
         fetchUsers(searchText)
     };
 

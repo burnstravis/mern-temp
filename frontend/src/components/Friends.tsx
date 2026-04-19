@@ -35,7 +35,6 @@ function Friends() {
             navigate('/');
         } else {
             fetchFriends(pageNumber);
-            //purgeGhostChat();
         }
     }, [pageNumber]);
 
