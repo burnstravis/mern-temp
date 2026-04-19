@@ -144,7 +144,7 @@ class _ConversationPageState extends State<ConversationPage> {
           const SizedBox(height: 20),
           Text(
             "Friend Connector",
-            style: GoogleFonts.dancingScript(fontSize: 64, color: Colors.white, fontWeight: FontWeight.bold),
+            style: GoogleFonts.dancingScript(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold),
           ),
           Text(
             "Messages",

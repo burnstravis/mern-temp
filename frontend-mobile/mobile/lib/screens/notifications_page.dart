@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart'; // Add this to your pubspec.yaml for date formatting
+import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -43,7 +43,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  // Helper for human-readable dates
   String _formatDate(String? dateStr) {
     if (dateStr == null) return "";
     try {
@@ -54,7 +53,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  // --- Logic for Support Needed (Chat) ---
   Future<void> _handleOpenChat(dynamic notif) async {
     String type = (notif['type'] ?? "").toString();
     String fullName = "Friend";
@@ -89,7 +87,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  // --- Logic for Friend Requests (Accept) ---
   Future<void> _handleAcceptFriend(dynamic notif) async {
     final String? friendshipId = notif['relatedId'];
     if (friendshipId == null) return;
@@ -134,39 +131,48 @@ class _NotificationsPageState extends State<NotificationsPage> {
       child: Column(
         children: [
           const SizedBox(height: 20),
-            Text(
-              "Friend Connector",
-              style: GoogleFonts.dancingScript(
-                fontSize: 64,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
-              ),
+          Text(
+            "Friend Connector",
+            style: GoogleFonts.dancingScript(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
             ),
-            Text(
-              "Notifications",
-              style: GoogleFonts.lora(
-                fontSize: 18,
-                fontStyle: FontStyle.italic,
-                color: const Color(0xFFF0EDFF),
-              ),
+          ),
+          Text(
+            "Notifications",
+            style: GoogleFonts.lora(
+              fontSize: 18,
+              fontStyle: FontStyle.italic,
+              color: const Color(0xFFF0EDFF),
             ),
-            const SizedBox(height: 20),
+          ),
+          const SizedBox(height: 20),
           Expanded(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-              decoration: const BoxDecoration(
+              margin: const EdgeInsets.symmetric(horizontal: 20), // Updated to 20
+              padding: const EdgeInsets.all(20), // Standardized padding
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                borderRadius: BorderRadius.circular(20), // Updated to 20
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
+                ],
               ),
               child: Column(
                 children: [
-                    Text(
+                  Text(
                     "Recent Notifications",
-                    style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF3C3489)),
+                    style: GoogleFonts.lora(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        fontStyle: FontStyle.italic, // Added italics to match other pages
+                        color: headerTextBlue
+                    ),
                   ),
-                  const SizedBox(height: 20),                  Expanded(
+                  const SizedBox(height: 20),
+                  Expanded(
                     child: RefreshIndicator(
                       onRefresh: _loadNotifications,
                       color: headerTextBlue,
@@ -177,7 +183,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               ),
             ),
           ),
-          const SizedBox(height: 80),
+          const SizedBox(height: 90), // Matched to 90 for nav bar consistency
         ],
       ),
     );
@@ -213,12 +219,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(15), // Matched to 15 (standard for cards)
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(1, 2),
           ),
         ],
       ),
@@ -226,7 +232,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => (type != 'friend_request') ? _handleOpenChat(notif) : null,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(15),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -269,11 +275,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       ),
                   ],
                 ),
-
                 if (type == 'friend_request' || type == 'support_needed' || type == 'new_message')
                   const SizedBox(height: 15),
-
-                // Action Row
                 if (type == 'friend_request')
                   resolved == null
                       ? Row(children: [
@@ -286,9 +289,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ])
                       : Text(
                     resolved == 'accept' ? "✓ Friend Request Accepted" : "Declined",
-                    style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic),
                   ),
-
                 if (type == 'support_needed' || type == 'new_message')
                   _buildActionBtn(
                       type == 'new_message' ? "Reply Now" : "Send Support",
@@ -313,10 +315,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
           backgroundColor: bg,
           foregroundColor: text,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), // Standardized radius
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        child: Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
+        child: Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic)),
       ),
     );
   }

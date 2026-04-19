@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:friend_connector_mobile/screens/resetpassword_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -91,8 +92,8 @@ class _ForgotPasswordPageScreenState extends State<ForgotPasswordPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text("Forgot your password?", style: TextStyle(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24)),
-                const Text("Enter the email address associated with your account and we'll send you a reset link.", style: TextStyle(color: Color(0xFF4A4680), fontStyle: FontStyle.italic)),
+                 Text("Forgot your password?", style: GoogleFonts.lora(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24)),
+                 Text("Enter the email address associated with your account and we'll send you a reset link.", style: GoogleFonts.lora(color: Color(0xFF4A4680), fontStyle: FontStyle.italic)),
                 const SizedBox(height: 24),
 
 
@@ -112,7 +113,7 @@ class _ForgotPasswordPageScreenState extends State<ForgotPasswordPage> {
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Send Reset Link", style: TextStyle(color: Colors.white, fontSize: 18)),
+                        :  Text("Send Reset Link", style: GoogleFonts.lora(color: Colors.white, fontSize: 18)),
                   ),
                 ),
                 TextButton(
@@ -123,7 +124,7 @@ class _ForgotPasswordPageScreenState extends State<ForgotPasswordPage> {
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text("← Back to Login", style: TextStyle(color: Colors.grey)),
+                  child:  Text("← Back to Login", style: GoogleFonts.lora(color: Colors.grey)),
                 )
               ],
             ),

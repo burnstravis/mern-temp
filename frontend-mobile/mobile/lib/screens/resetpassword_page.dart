@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:friend_connector_mobile/screens/login_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 
 class ResetPasswordPage extends StatefulWidget {
@@ -109,8 +110,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text("Create an account", style: TextStyle(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24)),
-                const Text("Join and start connecting with friends", style: TextStyle(color: Color(0xFF4A4680), fontStyle: FontStyle.italic)),
+                 Text("Create an account", style: GoogleFonts.lora(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24)),
+                 Text("Join and start connecting with friends", style: GoogleFonts.lora(color: Color(0xFF4A4680), fontStyle: FontStyle.italic)),
                 const SizedBox(height: 24),
 
                 Row(
@@ -138,12 +139,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordPage> {
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Reset Password", style: TextStyle(color: Colors.white, fontSize: 18)),
+                        :  Text("Reset Password", style: GoogleFonts.lora(color: Colors.white, fontSize: 18)),
                   ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text("← Back to Login", style: TextStyle(color: Colors.grey)),
+                  child:  Text("← Back to Login", style: GoogleFonts.lora(color: Colors.grey)),
                 )
               ],
             ),

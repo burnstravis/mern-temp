@@ -16,7 +16,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
   bool _isLoading = false;
   String _message = '';
 
-  // Pagination State
   int _pageNumber = 1;
   int _totalPages = 1;
 
@@ -45,7 +44,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
     final result = await ApiService.getUsers(
       search: searchText,
       page: _pageNumber,
-      limit: 10, // Hardcoded to 10 as requested
+      limit: 10,
     );
 
     if (mounted) {
@@ -84,25 +83,23 @@ class _DiscoverPageState extends State<DiscoverPage> {
       child: Column(
         children: [
           const SizedBox(height: 20),
-          const SizedBox(height: 20),
-                    Text(
-                      "Friend Connector",
-                      style: GoogleFonts.dancingScript(
-                        fontSize: 64,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
-                      ),
-                    ),
-                    Text(
-                      "Friends",
-                      style: GoogleFonts.lora(
-                        fontSize: 18,
-                        fontStyle: FontStyle.italic,
-                        color: const Color(0xFFF0EDFF),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+          Text(
+            "Friend Connector",
+            style: GoogleFonts.dancingScript(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
+            ),
+          ),
+          Text(
+            "Discover Friends",
+            style: GoogleFonts.lora(
+              fontSize: 18,
+              fontStyle: FontStyle.italic,
+              color: const Color(0xFFF0EDFF),
+            ),
+          ),
           const SizedBox(height: 20),
           Expanded(
             child: Container(
@@ -118,23 +115,28 @@ class _DiscoverPageState extends State<DiscoverPage> {
               child: Column(
                 children: [
                   Text(
-                    "Discover Friends",
-                    style: GoogleFonts.lora(fontSize: 32, fontWeight: FontWeight.bold, color: const Color(0xFF3C3489)),
+                    "Add New Friends",
+                    style: GoogleFonts.lora(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        fontStyle: FontStyle.italic, // Matched to Messages
+                        color: const Color(0xFF3C3489)
+                    ),
                   ),
                   const SizedBox(height: 20),
                   _buildSearchBar(),
                   const SizedBox(height: 20),
-
                   if (_isLoading)
                     const Expanded(child: Center(child: CircularProgressIndicator(color: searchHeaderBg)))
                   else if (_foundUsers.isEmpty)
                     Expanded(child: Center(child: Text(_message.isEmpty ? "No users found." : _message)))
                   else
-                    Expanded(child: _buildUserList()),
-
-                  // --- PAGINATION CONTROLS RESTORED ---
+                    Expanded(child: RefreshIndicator(
+                        onRefresh: () => _getUsers(searchText: _searchController.text),
+                        color: searchHeaderBg,
+                        child: _buildUserList()
+                    )),
                   if (!_isLoading && _foundUsers.isNotEmpty) _buildPaginationControls(),
-
                   if (_message.isNotEmpty && _foundUsers.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
@@ -154,7 +156,13 @@ class _DiscoverPageState extends State<DiscoverPage> {
     return Container(
       height: 55,
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: searchHeaderBg, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: searchHeaderBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
+        ],
+      ),
       child: Row(
         children: [
           Expanded(
@@ -162,7 +170,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
               child: TextField(
                 controller: _searchController,
-                decoration: const InputDecoration(hintText: "Search username", border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+                style: const TextStyle(color: Color.fromRGBO(0, 0, 0, 0.7), fontSize: 16),
+                decoration: const InputDecoration(
+                    hintText: "Search",
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12)
+                ),
                 onSubmitted: (val) {
                   _pageNumber = 1;
                   _getUsers(searchText: val);
@@ -180,7 +193,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(color: findButtonOrange, borderRadius: BorderRadius.circular(10)),
               alignment: Alignment.center,
-              child: const Text("Find", style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text("Find", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
             ),
           ),
         ],
@@ -213,11 +226,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
   Widget _buildUserList() {
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: _foundUsers.length,
       itemBuilder: (context, index) {
         final user = _foundUsers[index];
 
-        // Helper to capitalize first letter
         String fixCase(dynamic text) {
           String s = (text ?? "").toString().trim();
           if (s.isEmpty) return "";
@@ -229,48 +242,50 @@ class _DiscoverPageState extends State<DiscoverPage> {
         final displayName = "$firstName $lastName".trim();
 
         return Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: cardBg,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(15),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(1, 2))
+              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(1, 2))
             ],
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "@${user['username']}",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 18
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "@${user['username']}",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 18
+                        ),
                       ),
-                    ),
-                    Text(
-                      displayName.isEmpty ? "No Name Provided" : displayName,
-                      style: const TextStyle(fontSize: 14, color: Colors.black87),
-                    ),
-                  ],
+                      Text(
+                        displayName.isEmpty ? "No Name Provided" : displayName,
+                        style: const TextStyle(fontSize: 14, color: Colors.black87),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () => _sendRequest(user['username']),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: findButtonOrange,
-                  foregroundColor: Colors.black,
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ElevatedButton(
+                  onPressed: () => _sendRequest(user['username']),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: findButtonOrange,
+                    foregroundColor: Colors.black,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("Send", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
                 ),
-                child: const Text("Send", style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

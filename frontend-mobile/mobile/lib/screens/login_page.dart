@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:friend_connector_mobile/screens/forgotpassword_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/login_response.dart';
 import '../services/api_service.dart';
 import 'home_page.dart';
@@ -95,15 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 // Header inside the screen
-                const Text(
-                  'Login',
-                  style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white
-                  ),
-                ),
-                const SizedBox(height: 30),
+
 
                 // The Auth Card Container
                 Container(
@@ -122,9 +115,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Text(
+
+                      Text(
+                        'Login',
+                        style: GoogleFonts.lora(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24,                 fontStyle: FontStyle.italic,
+                        ),
+
+                      ),
+                      const SizedBox(height: 30),
+
+                      Text(
                         "Enter your details below",
-                        style: TextStyle(
+                        style: GoogleFonts.lora(
                           color: Color(0xFF4A4680),
                           fontSize: 18,
                           fontStyle: FontStyle.italic,
@@ -185,9 +187,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                              : const Text(
+                              :  Text(
                             "Sign In",
-                            style: TextStyle(
+                            style: GoogleFonts.lora(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -211,9 +213,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(50),
                             ),
                           ),
-                          child: const Text(
+                          child:  Text(
                             "Forgot Password?",
-                            style: TextStyle(
+                            style: GoogleFonts.lora(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),

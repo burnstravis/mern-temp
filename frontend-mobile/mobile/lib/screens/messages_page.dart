@@ -115,7 +115,7 @@ class _MessagesPageState extends State<MessagesPage> {
           Text(
             "Friend Connector",
             style: GoogleFonts.dancingScript(
-              fontSize: 64,
+              fontSize: 48,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
@@ -221,8 +221,10 @@ class _MessagesPageState extends State<MessagesPage> {
               child: TextField(
                 controller: _searchController,
                 onChanged: _filterList,
+                style: const TextStyle(color: Color.fromRGBO(0, 0, 0, 0.7), fontSize: 16),
+
                 decoration: const InputDecoration(
-                  hintText: "Search conversations",
+                  hintText: "Search",
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(horizontal: 12),
                 ),

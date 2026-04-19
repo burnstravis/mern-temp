@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> {
 
   static const Color homeWrapperBg = Color(0xFFA89FD8);
   static const Color homeWrapperBorder = Color(0xFF7B6FC4);
-  static const Color figmaBlue = Color(0xFF63A7FF);
+  static const Color figmaBlue = Color(0xFF3C3489);
 
   @override
   void initState() {
@@ -81,7 +81,7 @@ class _HomePageState extends State<HomePage> {
             child: Container(
               decoration: BoxDecoration(
                 border: Border.all(color: homeWrapperBorder, width: 4),
-                borderRadius: BorderRadius.circular(64),
+                borderRadius: BorderRadius.circular(48),
               ),
             ),
           ),
@@ -89,20 +89,19 @@ class _HomePageState extends State<HomePage> {
           // Logout Button
           Positioned(
             top: safePadding.top + 10,
-            right: 25,
+            right: 20,
             child: GestureDetector(
               onTap: _doLogout,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child:  Row(
                   children: [
-                    Icon(Icons.logout, size: 16, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text("Logout", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Icon(Icons.logout, size: 16, color: Colors.black87),
+                    SizedBox(width: 2),
                   ],
                 ),
               ),
@@ -230,7 +229,7 @@ class _HomePageState extends State<HomePage> {
           Text(
             "Friend Connector",
             style: GoogleFonts.dancingScript(
-              fontSize: 64,
+              fontSize: 48,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],

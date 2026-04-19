@@ -128,7 +128,7 @@ class _FriendsPageState extends State<FriendsPage> {
           Text(
             "Friend Connector",
             style: GoogleFonts.dancingScript(
-              fontSize: 64,
+              fontSize: 48,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
@@ -234,8 +234,7 @@ class _FriendsPageState extends State<FriendsPage> {
                 textAlignVertical: TextAlignVertical.center,
                 style: const TextStyle(color: Color.fromRGBO(0, 0, 0, 0.7), fontSize: 16),
                 decoration: const InputDecoration(
-                  hintText: "Search username",
-                  hintStyle: TextStyle(color: Color.fromRGBO(0, 0, 0, 0.4)),
+                  hintText: "Search",
                   border: InputBorder.none,
                   isCollapsed: true,
                   contentPadding: EdgeInsets.symmetric(horizontal: 12),

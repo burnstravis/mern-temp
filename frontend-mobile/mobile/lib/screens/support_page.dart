@@ -76,7 +76,7 @@ class _SupportPageState extends State<SupportPage> {
           Text(
           "Friend Connector",
           style: GoogleFonts.dancingScript(
-            fontSize: 64,
+            fontSize: 48,
             fontWeight: FontWeight.bold,
             color: Colors.white,
             shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
@@ -107,10 +107,10 @@ class _SupportPageState extends State<SupportPage> {
                 child: Column(
                   children: [
                     Text(
-                      "Need help with something $capitalizedName?",
+                      "Need help $capitalizedName?",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.lora(
-                        fontSize: 24,
+                        fontSize: 32,
                         fontStyle: FontStyle.italic,
                         fontWeight: FontWeight.bold,
                         color: headerTextBlue,

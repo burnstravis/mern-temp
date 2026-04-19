@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -161,7 +162,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Text(
                   _isVerifying ? "Verify Email" : "Create an account",
-                  style: const TextStyle(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24),
+                  style: GoogleFonts.lora(color: Color(0xFF4A4680), fontWeight: FontWeight.bold, fontSize: 24,                 fontStyle: FontStyle.italic,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -169,7 +171,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? "Enter the code sent to ${_emailController.text}"
                       : "Join and start connecting with friends",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFF4A4680), fontStyle: FontStyle.italic),
+                  style: GoogleFonts.lora(
+                    color: Color(0xFF4A4680),
+                    fontSize: 18,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -209,7 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(_isVerifying ? "Verify Account" : "Register",
-                        style: const TextStyle(color: Colors.white, fontSize: 18)),
+                        style:  GoogleFonts.lora(color: Colors.white, fontSize: 18)),
                   ),
                 ),
                 TextButton(
@@ -220,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text("← Back", style: TextStyle(color: Colors.grey)),
+                  child:  Text("← Back", style: GoogleFonts.lora(color: Colors.grey)),
                 )
               ],
             ),
