@@ -51,7 +51,7 @@ class _ConversationPageState extends State<ConversationPage> {
 
   void _initSocket() {
     // Connect to your server (Use 10.0.2.2 for Android Emulator)
-    _socket = IO.io('http://10.0.2.2:5000', IO.OptionBuilder()
+    _socket = IO.io('https://largeproject.nathanfoss.me', IO.OptionBuilder()
         .setTransports(['websocket'])
         .setAuth({'token': TokenManager.getToken()})
         .enableAutoConnect()
@@ -59,19 +59,25 @@ class _ConversationPageState extends State<ConversationPage> {
 
     _socket.onConnect((_) {
       debugPrint('Connected to WebSocket');
-      _socket.emit('join:conversation', widget.conversationId);
+      _socket.emit('join:conversation', 'conversation:${widget.conversationId}');
     });
 
     _socket.on('message:new', (newMessage) {
       if (mounted) {
         setState(() {
-          // Check for duplicates and insert at start for reverse ListView
-          if (!_messages.any((m) => m['_id'] == newMessage['_id'])) {
+
+          bool alreadyExists = _messages.any((m) =>
+          m['_id'] == newMessage['_id'] ||
+              (m['text'] == newMessage['text'] && m['senderId'] == newMessage['senderId'])
+          );
+
+          if (!alreadyExists) {
             _messages.insert(0, newMessage);
           }
         });
       }
     });
+
   }
 
   Future<void> _fetchMessages() async {
@@ -270,7 +276,7 @@ class _ConversationPageState extends State<ConversationPage> {
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final msg = _messages[index];
-        final bool isMe = msg['senderId'] == widget.currentUserId;
+        final bool isMe = msg['senderId'].toString() == widget.currentUserId.toString();
 
         return _chatBubble(
             msg['text'] ?? "",
