@@ -1,5 +1,4 @@
 import {useEffect, useState} from 'react';
-//import { buildPath } from './path';
 import {retrieveToken, storeToken} from '../tokenStorage';
 import styles from '../pages/AddFriendsPage.module.css'
 import {useNavigate} from "react-router-dom";
@@ -12,30 +11,55 @@ function AddFriends() {
 
     const [searchText, setSearchText] = useState('');
     const [users, setUsers] = useState<any[]>([]);
-    const [message,setMessage] = useState('');
-
+    const [message, setMessage] = useState('');
+    const [friends, setFriends] = useState<Set<string>>(new Set());
+    const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
 
     const _ud = localStorage.getItem('user_data');
-    //const ud = _ud ? JSON.parse(_ud) : null;
-    //const userId = ud._id || ud.id;
 
     useEffect(() => {
         if (!_ud) {
             navigate('/');
+        } else {
+            fetchFriends();
+            fetchUsers(searchText);
         }
-        else{
-            fetchUsers(searchText)
-        }
-
     }, [navigate, _ud]);
 
+    async function fetchFriends() {
+        try {
+            const token = retrieveToken();
+            if (!token) return;
 
+            const response = await fetch(buildPath('api/friends'), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const res = await response.json();
+            if (res.accessToken) storeToken(res.accessToken);
+
+            const ud = JSON.parse(_ud!);
+            const myId = ud._id ?? ud.id;
+
+            const friendIds = res.friends
+                ? res.friends.map((f: any) => f._id.toString())
+                : [];
+
+            setFriends(new Set([...friendIds, myId]));
+
+        } catch (e) {
+            console.error('Failed to fetch friends:', e);
+        }
+    }
 
     async function fetchUsers(searchText: string) {
-        try{
+        try {
             searchUsers(searchText);
-        }
-        catch(e){
+        } catch (e) {
             setMessage('Unable to fetch users: ' + e);
         }
     }
@@ -66,8 +90,8 @@ function AddFriends() {
                 sendFriendRequestNotification(targetUserId, res.friendshipId);
             }
 
+            setPendingRequests(prev => new Set([...prev, targetUserId]));
             setMessage(`Friend request sent to @${targetUsername}!`);
-
 
         } catch (e) {
             setMessage('Unable to send a friend request: ' + e);
@@ -81,7 +105,6 @@ function AddFriends() {
 
             const _ud = localStorage.getItem('user_data');
             const ud = _ud ? JSON.parse(_ud) : {};
-            // Use a fallback for names if they aren't in local storage
             const myName = (ud.firstName && ud.lastName)
                 ? `${ud.firstName} ${ud.lastName}`
                 : "Someone";
@@ -93,7 +116,7 @@ function AddFriends() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    recipientId: targetUserId, // Now correctly utilized by the backend
+                    recipientId: targetUserId,
                     type: 'friend_request',
                     content: `${myName} sent you a friend request!`,
                     relatedId: friendshipId
@@ -101,10 +124,7 @@ function AddFriends() {
             });
 
             const res = await response.json();
-
-            if (res.accessToken) {
-                storeToken(res.accessToken);
-            }
+            if (res.accessToken) storeToken(res.accessToken);
 
         } catch (e) {
             console.error("Error sending notification:", e);
@@ -140,21 +160,21 @@ function AddFriends() {
             }
 
             setUsers(res.users);
-            return;
 
         } catch (e) {
             setMessage('Failed to find users');
             setUsers([]);
-            return;
         }
     }
 
     const handleSearch = () => {
         setMessage('');
-        fetchUsers(searchText)
+        fetchUsers(searchText);
     };
 
-
+    const filteredUsers = users.filter(user =>
+        !friends.has(user._id.toString()) && !pendingRequests.has(user._id.toString())
+    );
 
     return (
         <div className={styles.addFriendsComponent}>
@@ -172,13 +192,12 @@ function AddFriends() {
                         autoFocus={true}
                         autoComplete="off"
                     />
-
                     <button id={styles.searchButton} type="button" onClick={handleSearch}>Find</button>
                 </div>
 
                 <div className={styles.listUsersContainer}>
-                    {users.length > 0 ? (
-                        users.map((user) => (
+                    {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => (
                             <div key={user._id} className={styles.userCard}>
 
                                 <div className={styles.userCardInner}>
@@ -188,12 +207,12 @@ function AddFriends() {
 
                                     <div className={styles.bottomRow}>
                                         <div className={styles.userDetails}>
-                                        <span className={styles.lastText}>
-                                            {user.firstName} {user.lastName}
-                                        </span>
+                                            <span className={styles.lastText}>
+                                                {user.firstName} {user.lastName}
+                                            </span>
                                             <span className={styles.timestamp}>
-                                            {user.birthday}
-                                        </span>
+                                                {user.birthday}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -218,4 +237,5 @@ function AddFriends() {
         </div>
     );
 }
+
 export default AddFriends;

@@ -900,8 +900,8 @@ exports.setApp = function (app, client, io) {
                 userId: userId,
                 date: today
             });
-            if (usageCount >= 2) {
-                return res.status(429).json({ error: 'You have used both smart replies for today in this conversation.' });
+            if (usageCount >= 5) {
+                return res.status(429).json({ error: 'You have used up your 5 smart replies for today in this conversation.' });
             }
 
             // 3. Fetch last 20 messages
@@ -1031,7 +1031,8 @@ exports.setApp = function (app, client, io) {
                         senderFirstName: userFirstName, // Storing these helps the frontend
                         senderLastName: userLastName,
                         type: 'support_needed',
-                        content: `${fullName} needs some ${type}!`,
+                        content: `${fullName} needs some ${type}!`,  // keep as the label/header
+                        message: content,                              // user's typed message
                         createdAt: new Date(),
                         isRead: false,
                         relatedId: result.insertedId
