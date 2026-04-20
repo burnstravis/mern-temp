@@ -202,21 +202,21 @@ class _HomePageState extends State<HomePage> {
         );
         case 5: return SupportPage(firstName: widget.firstName);
         case 6:
-        if (_currentUserId == null || _currentUserId!.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
-        }
-        return ConversationPage(
-          // THIS KEY IS CRITICAL - it resets the state of the chat page
-          key: UniqueKey(),
-          conversationId: _activeConversationId ?? "",
-          currentUserId: _currentUserId!,
-          displayName: _activeFriendName ?? "Friend",
-          onBack: () {
-            setState(() {
-              _selectedIndex = _lastIndex;
-            });
-          },
-        );
+          if (_currentUserId == null || _currentUserId!.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: Colors.white));
+          }
+          return ConversationPage(
+            // Use ValueKey so the state persists across keyboard toggles
+            key: ValueKey(_activeConversationId),
+            conversationId: _activeConversationId ?? "",
+            currentUserId: _currentUserId!,
+            displayName: _activeFriendName ?? "Friend",
+            onBack: () {
+              setState(() {
+                _selectedIndex = _lastIndex;
+              });
+            },
+          );
       default: return _buildHomeView();
     }
   }

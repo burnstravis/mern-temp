@@ -223,25 +223,25 @@ class _FriendsPageState extends State<FriendsPage> {
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: TextField(
-                controller: _searchController,
-                textAlignVertical: TextAlignVertical.center,
-                style: const TextStyle(color: Color.fromRGBO(0, 0, 0, 0.7), fontSize: 16),
-                decoration: const InputDecoration(
-                  hintText: "Search",
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(
+                      color: Color.fromRGBO(0, 0, 0, 0.7),
+                      fontSize: 16,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: "Search",
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {

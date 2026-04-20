@@ -31,6 +31,7 @@ class _ConversationPageState extends State<ConversationPage> {
   List<dynamic> _messages = [];
   bool _isLoading = true;
   String _prompt = "Loading...";
+  bool _isConnecting = false;
 
   @override
   void initState() {
@@ -40,18 +41,11 @@ class _ConversationPageState extends State<ConversationPage> {
     _initSocket();
   }
 
-  bool _isConnecting = false;
-
-  @override
   @override
   void dispose() {
-    // 1. Explicitly leave the room
     _socket.emit('leave:conversation', widget.conversationId);
-    // 2. Break the physical connection
     _socket.disconnect();
-    // 3. Destroy the instance
     _socket.dispose();
-
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -63,12 +57,10 @@ class _ConversationPageState extends State<ConversationPage> {
 
     final String? token = await TokenManager.getToken();
 
-    // Force a completely fresh manager for Linux to bypass cache
     _socket = IO.io('https://largeproject.nathanfoss.me', IO.OptionBuilder()
         .setAuth({'token': 'Bearer $token'})
         .setTransports(['websocket'])
         .setPath('/socket.io/')
-    // Force the engine to create a new connection instead of reusing
         .setQuery({'forceNew': 'true', 'timestamp': DateTime.now().millisecondsSinceEpoch.toString()})
         .enableForceNew()
         .enableAutoConnect()
@@ -95,17 +87,15 @@ class _ConversationPageState extends State<ConversationPage> {
       if (mounted) setState(() => _isConnecting = false);
     });
 
-    _socket.onDisconnect((reason) => print('DISCONNECTED: $reason'));
+    _socket.onDisconnect((reason) => debugPrint('DISCONNECTED: $reason'));
   }
 
   Future<void> _fetchMessages() async {
     if (widget.currentUserId.isEmpty || widget.conversationId.isEmpty) return;
-
     final result = await ApiService.getMessages(
       senderID: widget.currentUserId,
       conversationID: widget.conversationId,
     );
-
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -119,11 +109,9 @@ class _ConversationPageState extends State<ConversationPage> {
   Future<void> _handleSend() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-
     final String originalText = text;
     _messageController.clear();
 
-    // Send to API only. The socket 'message:new' event will update our UI.
     final result = await ApiService.sendMessage(
       senderID: widget.currentUserId,
       conversationID: widget.conversationId,
@@ -132,13 +120,9 @@ class _ConversationPageState extends State<ConversationPage> {
 
     if (result.containsKey('error') && result['error'] != null && result['error'].isNotEmpty) {
       _messageController.text = originalText;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['error'])),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['error'])));
     }
   }
-
-  // --- UI remains identical to your design ---
 
   Future<void> _fetchPrompt() async {
     final result = await ApiService.getRandomPrompt();
@@ -167,28 +151,39 @@ class _ConversationPageState extends State<ConversationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Text("Friend Connector", style: GoogleFonts.dancingScript(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold)),
-          Text("Messages", style: GoogleFonts.lora(fontSize: 18, fontStyle: FontStyle.italic, color: const Color(0xFFF0EDFF))),
-          const SizedBox(height: 20),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(color: const Color(0xFFF0EDFF), borderRadius: BorderRadius.circular(20)),
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  Expanded(child: _isLoading ? const Center(child: CircularProgressIndicator()) : _buildMessageList()),
-                  _buildInputArea(),
-                ],
+    // Detect keyboard height
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard on background tap
+      child: SafeArea(
+        child: Padding(
+          // Shift content up based on keyboard height
+          padding: EdgeInsets.only(bottom: keyboardHeight),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              Text("Friend Connector", style: GoogleFonts.dancingScript(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold)),
+              Text("Messages", style: GoogleFonts.lora(fontSize: 18, fontStyle: FontStyle.italic, color: const Color(0xFFF0EDFF))),
+              const SizedBox(height: 20),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(color: const Color(0xFFF0EDFF), borderRadius: BorderRadius.circular(20)),
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      Expanded(child: _isLoading ? const Center(child: CircularProgressIndicator()) : _buildMessageList()),
+                      _buildInputArea(),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              // Hide bottom spacer when keyboard is active to save space
+              if (keyboardHeight == 0) const SizedBox(height: 90),
+            ],
           ),
-          const SizedBox(height: 90),
-        ],
+        ),
       ),
     );
   }
@@ -281,6 +276,14 @@ class _ConversationPageState extends State<ConversationPage> {
             child: TextField(
               controller: _messageController,
               onSubmitted: (_) => _handleSend(),
+              // Ensure we scroll to the latest message when tapping the field
+              onTap: () {
+                 Timer(const Duration(milliseconds: 300), () {
+                   if (_scrollController.hasClients) {
+                     _scrollController.jumpTo(0);
+                   }
+                 });
+              },
               decoration: InputDecoration(fillColor: Colors.white, filled: true, hintText: "message", border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
             ),
           ),
