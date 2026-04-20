@@ -136,9 +136,8 @@ exports.setApp = function (app, client, io) {
             const { error: sendError } = await resend.emails.send({
                 from: 'noreply@largeproject.nathanfoss.me',
                 to: email,
-                subject: '[TEST] VERIFY EMAIL FOR FRIEND CONNECTOR',
-                text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.
-                This email is a test if it is correct. TO BE REWRITTEN.`
+                subject: 'VERIFY EMAIL FOR FRIEND CONNECTOR',
+                text: `!\n\nYour recovery code is: ${verificationCode}\n\nEnter this code on the app to reset your password.`
             });
 
             if (sendError) throw new Error(sendError.message);
