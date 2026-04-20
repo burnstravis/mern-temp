@@ -9,15 +9,10 @@ import styles from '../pages/FriendsPage.module.css';
 interface Notification {
   _id: string;
   recipientId: string;
-  type:
-      | 'friend_request'
-      | 'alert'
-      | 'birthday'
-      | 'support_received'
-      | 'birthday_wish_received'
-      | 'support_needed';
+  type: 'friend_request' | 'alert' | 'birthday' | 'support_received' | 'birthday_wish_received' | 'support_needed';
   requesterId: string;
   content: string;
+  message?: string;
   createdAt: string | Date;
   isRead: boolean;
   relatedId: string | null;
@@ -243,30 +238,33 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
         )}
 
         {notification.type === 'support_needed' && (
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <div className={styles.actionButtons}>
-                <button
-                    className={styles.acceptBtn}
-                    onClick={(e) => {
-                      e.stopPropagation();
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexDirection: 'column' }}>
+            {notification.message && (
+            <p style={{ margin: 0, fontSize: '13px', color: '#555' }}>{notification.message}</p>
+            )}
+            <div className={styles.actionButtons}>
+              <button
+                  className={styles.acceptBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
 
-                      const idToUse = notification.senderId;
-                      const firstName = notification.senderFirstName || "Friend";
-                      const lastName = notification.senderLastName || "";
+                    const idToUse = notification.senderId;
+                    const firstName = notification.senderFirstName || "Friend";
+                    const lastName = notification.senderLastName || "";
 
-                      if (!idToUse) {
-                        console.error("No requesterId found on this notification:", notification);
-                        return;
-                      }
+                    if (!idToUse) {
+                      console.error("No requesterId found on this notification:", notification);
+                      return;
+                    }
 
-                      openChatWith(idToUse, firstName, lastName);
-                    }}
-                >
-                  Message Friend
-                </button>
-              </div>
-            </div>
-        )}
+                    openChatWith(idToUse, firstName, lastName);
+                  }}
+      >
+        Message Friend
+      </button>
+    </div>
+  </div>
+)}
 
       </div>
   );
