@@ -711,16 +711,27 @@ exports.setApp = function (app, client, io) {
 
     app.get('/api/return-random-prompt', async (req, res) => {
         try {
+            const conversationId = req.query.conversationId;
+
+            if (!conversationId) {
+                return res.status(400).json({ error: 'Conversation ID is required.' });
+            }
+
             const db = client.db('large_project');
 
-            const prompts = await db.collection('prompts').find().toArray();
+            const prompts = await db.collection('prompts').find().sort({ _id: 1 }).toArray();
 
             if (!prompts.length) {
                 return res.status(404).json({ error: 'No prompts found.' });
             }
 
-            const randomIndex = crypto.randomInt(0, prompts.length);
-            const prompt = prompts[randomIndex];
+            const today = new Date().toISOString().split('T')[0];
+            const hashHex = crypto
+                .createHash('sha256')
+                .update(`${conversationId}:${today}`)
+                .digest('hex');
+            const promptIndex = parseInt(hashHex.slice(0, 8), 16) % prompts.length;
+            const prompt = prompts[promptIndex];
 
             res.status(200).json({ error: '', prompt: prompt });
         } catch (e) {

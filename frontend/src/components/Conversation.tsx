@@ -74,10 +74,10 @@ function Conversation() {
         }
     }, [userId]);
 
-    const fetchRandomPrompt = useCallback(async () => {
+    const fetchRandomPrompt = useCallback(async (conversationId: string) => {
         try {
             const token = retrieveToken();
-            const response = await fetch(buildPath('api/return-random-prompt'), {
+            const response = await fetch(`${buildPath('api/return-random-prompt')}?conversationId=${conversationId}`, {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -148,8 +148,6 @@ function Conversation() {
             });
         });
 
-        fetchRandomPrompt();
-
         return () => {
             // Only disconnect if we are actually unmounting for real
             if (socketRef.current) {
@@ -159,7 +157,23 @@ function Conversation() {
                 socketRef.current = null;
             }
         };
-    }, [friendId, userId]); // Keep dependencies minimal
+    }, [friendId, userId, getConvId, loadConversations, fetchRandomPrompt]); // Keep dependencies minimal
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadPrompt = async () => {
+            const convId = await getConvId();
+            if (!convId || !isMounted) return;
+            fetchRandomPrompt(convId);
+        };
+
+        loadPrompt();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [getConvId, fetchRandomPrompt]);
 
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
