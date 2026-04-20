@@ -604,7 +604,7 @@ exports.setApp = function (app, client, io) {
             const senderObjectId = new ObjectId(senderID);
 
             const messages = await db.collection('messages')
-                .find({ conversationId: conversationID })
+                .find({ conversationId: req.params.conversationId })
                 .sort({ createdAt: 1 })
                 .toArray();
 
