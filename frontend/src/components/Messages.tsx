@@ -36,6 +36,43 @@ function Messages() {
         return `${Math.floor(diffInSeconds / 86400)}d`;
     };
 
+    const extractBirthdayParts = (birthday?: string): { month: number; day: number } | null => {
+        if (!birthday) return null;
+
+        const normalizedBirthday = birthday.trim().split('T')[0];
+        const yearMonthDayMatch = normalizedBirthday.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (yearMonthDayMatch) {
+            return {
+                month: Number(yearMonthDayMatch[2]) - 1,
+                day: Number(yearMonthDayMatch[3])
+            };
+        }
+
+        const monthDayYearMatch = normalizedBirthday.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+        if (monthDayYearMatch) {
+            return {
+                month: Number(monthDayYearMatch[1]) - 1,
+                day: Number(monthDayYearMatch[2])
+            };
+        }
+
+        const parsedBirthday = new Date(normalizedBirthday);
+        if (Number.isNaN(parsedBirthday.getTime())) return null;
+
+        return {
+            month: parsedBirthday.getUTCMonth(),
+            day: parsedBirthday.getUTCDate()
+        };
+    };
+
+    const isBirthdayToday = (birthday?: string): boolean => {
+        const birthdayParts = extractBirthdayParts(birthday);
+        if (!birthdayParts) return false;
+
+        const today = new Date();
+        return birthdayParts.month === today.getMonth() && birthdayParts.day === today.getDate();
+    };
+
     async function fetchConversations() {
         setLoading(true);
         try {
@@ -68,7 +105,10 @@ function Messages() {
         console.log(conv.otherUser);
         const friendId = conv.participants.find((p: string) => p !== userId);
         navigate(`/conversation/${friendId}`, {
-            state: { name: `${conv.otherUser.firstName} ${conv.otherUser.lastName}`  || "Friend" }
+            state: {
+                name: `${conv.otherUser.firstName} ${conv.otherUser.lastName}` || "Friend",
+                birthday: conv.otherUser.birthday || ''
+            }
         });
     }
 
@@ -108,7 +148,10 @@ function Messages() {
                 {filteredList.map((conv) => (
                     <div key={conv._id} className={styles.conversationCard} onClick={() => loadConversation(conv)}>
                         <div className={styles.conversationAvatar}>
-                            {conv.otherUser.firstName} {conv.otherUser.lastName}
+                            <span>{conv.otherUser.firstName} {conv.otherUser.lastName}</span>
+                            {isBirthdayToday(conv.otherUser.birthday) && (
+                                <span className={styles.birthdayMarker} title="Birthday today">🎂</span>
+                            )}
                         </div>
                         <div className={styles.conversationDetails}>
                             <div className={styles.lastText}>

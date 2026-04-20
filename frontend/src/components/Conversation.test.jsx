@@ -24,10 +24,23 @@ describe('Conversation Component Unit Tests', () => {
     const mockState = { name: 'John Doe', conversationId: 'conv789' };
 
     beforeEach(() => {
-        vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(JSON.stringify(mockUser));
+        vi.stubGlobal('localStorage', {
+            getItem: vi.fn().mockReturnValue(JSON.stringify(mockUser)),
+            setItem: vi.fn(),
+            removeItem: vi.fn(),
+            clear: vi.fn(),
+        });
         tokenStorage.retrieveToken.mockReturnValue('mock-token');
 
         global.fetch = vi.fn((url) => {
+            if (url.includes('api/friend-profile')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        friend: { firstName: 'John', lastName: 'Doe', birthday: '1990-01-01' }
+                    }),
+                });
+            }
             if (url.includes('api/messages')) {
                 return Promise.resolve({
                     ok: true,
@@ -74,16 +87,91 @@ describe('Conversation Component Unit Tests', () => {
         expect(prompt).toBeInTheDocument();
     });
 
+    it('shows a birthday marker when it is the friend birthday', async () => {
+        const today = new Date();
+        const birthdayValue = `${today.getFullYear() - 30}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        global.fetch.mockImplementation((url) => {
+            if (url.includes('api/friend-profile')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        friend: { firstName: 'John', lastName: 'Doe', birthday: birthdayValue }
+                    }),
+                });
+            }
+            if (url.includes('api/messages')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ messages: [] }),
+                });
+            }
+            if (url.includes('api/return-random-prompt')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ prompt: { content: 'Birthday prompt' } }),
+                });
+            }
+            if (url.includes('api/conversations')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ conversationId: 'conv789' }),
+                });
+            }
+            return Promise.reject(new Error('Unknown API call'));
+        });
+
+        renderWithRouter();
+
+        const badge = await screen.findByText(/Birthday today/i);
+        expect(badge).toBeInTheDocument();
+    });
+
     it('clears the input field after sending a message', async () => {
+        global.fetch.mockImplementation((url, init) => {
+            if (url.includes('api/friend-profile')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        friend: { firstName: 'John', lastName: 'Doe', birthday: '1990-01-01' }
+                    }),
+                });
+            }
+            if (url.includes('api/messages')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        messages: [{ _id: 'm1', text: 'Hello!', senderId: 'friend456', createdAt: new Date().toISOString() }]
+                    }),
+                });
+            }
+            if (url.includes('api/messages') && init?.method === 'POST') {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ accessToken: 'new-token' }),
+                });
+            }
+            if (url.includes('api/return-random-prompt')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        prompt: { content: 'If you were a ghost, how would you mildly inconvenience people?' }
+                    }),
+                });
+            }
+            if (url.includes('api/conversations')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ conversationId: 'conv789' }),
+                });
+            }
+            return Promise.reject(new Error('Unknown API call'));
+        });
+
         renderWithRouter();
 
         const input = await screen.findByPlaceholderText(/message/i);
         const sendButton = screen.getByText(/Send/i);
-
-        global.fetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ accessToken: 'new-token' }),
-        });
 
         fireEvent.change(input, { target: { value: 'Testing a new message' } });
         fireEvent.click(sendButton);
@@ -100,8 +188,28 @@ describe('Conversation Component Unit Tests', () => {
         });
 
         global.fetch.mockImplementation((url) => {
+            if (url.includes('api/friend-profile')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        friend: { firstName: 'John', lastName: 'Doe', birthday: '1990-01-01' }
+                    }),
+                });
+            }
             if (url.includes('api/messages')) {
                 return loadingPromise;
+            }
+            if (url.includes('api/return-random-prompt')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({})
+                });
+            }
+            if (url.includes('api/conversations')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ conversationId: 'conv789' }),
+                });
             }
             return Promise.resolve({
                 ok: true,

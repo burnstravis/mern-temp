@@ -1644,4 +1644,74 @@ describe('GET /api/receive-notification', () => {
         expect(res.status).toBe(200);
         expect(res.body.notifications).toHaveLength(0);
     });
+
+    it('creates birthday reminders a week before and on the day of a friend birthday', async () => {
+        const fixedDate = new Date('2026-04-20T12:00:00.000Z');
+        jest.useFakeTimers().setSystemTime(fixedDate);
+
+        const userId = new ObjectId(MOCK_USER_ID);
+        const todayFriendId = new ObjectId('617f1f77bcf86cd799439022');
+        const weekOutFriendId = new ObjectId('617f1f77bcf86cd799439033');
+        const missingBirthdayFriendId = new ObjectId('617f1f77bcf86cd799439044');
+        const storedNotifications = [];
+
+        const client = buildMockClient({
+            friendships: {
+                find: jest.fn(() => ({
+                    toArray: jest.fn().mockResolvedValue([
+                        { requesterId: userId, recipientId: todayFriendId, status: 'accepted' },
+                        { requesterId: weekOutFriendId, recipientId: userId, status: 'accepted' },
+                        { requesterId: userId, recipientId: missingBirthdayFriendId, status: 'accepted' }
+                    ])
+                }))
+            },
+            users: {
+                find: jest.fn(() => ({
+                    project: jest.fn().mockReturnThis(),
+                    toArray: jest.fn().mockResolvedValue([
+                        { _id: todayFriendId, firstName: 'Jane', lastName: 'Doe', birthday: '1990-04-20' },
+                        { _id: weekOutFriendId, firstName: 'Sam', lastName: 'Smith', birthday: '1990-04-27' },
+                        { _id: missingBirthdayFriendId, firstName: 'No', lastName: 'Birthday', birthday: '' }
+                    ])
+                }))
+            },
+            notifications: {
+                findOne: jest.fn(async (query) => storedNotifications.find((notification) => (
+                    notification.recipientId.toString() === query.recipientId.toString() &&
+                    notification.type === query.type &&
+                    notification.relatedId.toString() === query.relatedId.toString() &&
+                    notification.reminderStage === query.reminderStage &&
+                    notification.reminderYear === query.reminderYear
+                )) || null),
+                insertMany: jest.fn(async (documents) => {
+                    storedNotifications.push(...documents);
+                    return { insertedCount: documents.length };
+                }),
+                find: jest.fn(() => ({
+                    toArray: jest.fn().mockResolvedValue(storedNotifications.filter((notification) => notification.isRead === false))
+                }))
+            }
+        });
+        const app = buildApp(client);
+
+        try {
+            const res = await request(app)
+                .get('/api/receive-notification')
+                .set('Authorization', MOCK_TOKEN);
+
+            expect(res.status).toBe(200);
+            expect(res.body.notifications).toHaveLength(2);
+            expect(res.body.notifications.map((notification) => notification.type)).toEqual([
+                'birthday_reminder',
+                'birthday_reminder'
+            ]);
+            expect(res.body.notifications.map((notification) => notification.content)).toEqual([
+                "Jane Doe's birthday is today!",
+                "Sam Smith's birthday is in a week."
+            ]);
+            expect(client.db().collection('notifications').insertMany).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
 });
