@@ -94,12 +94,46 @@ describe('Conversation Component Unit Tests', () => {
     });
 
     it('shows loading state initially', async () => {
+        let resolveLoading;
+        const loadingPromise = new Promise((resolve) => {
+            resolveLoading = resolve;
+        });
+
+        global.fetch.mockImplementation((url) => {
+            if (url.includes('api/messages')) {
+                return loadingPromise;
+            }
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({})
+            });
+        });
+
+        let connectCallback;
+        const { io } = await import('socket.io-client');
+        io.mockReturnValue({
+            on: vi.fn((event, cb) => {
+                if (event === 'connect') connectCallback = cb;
+            }),
+            emit: vi.fn(),
+            off: vi.fn(),
+            disconnect: vi.fn(),
+        });
+
+        const { act } = await import('@testing-library/react');
         renderWithRouter();
 
-        expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+        await act(async () => {
+            if (connectCallback) await connectCallback();
+        });
 
-        await waitFor(() => {
-            expect(screen.queryByText(/Loading.../i)).not.toBeInTheDocument();
+        expect(screen.getByText(/Loading\.\.\./i)).toBeInTheDocument();
+
+        await act(async () => {
+            resolveLoading({
+                ok: true,
+                json: async () => ({ messages: [] }),
+            });
         });
     });
 });

@@ -4,11 +4,14 @@ import { BrowserRouter } from 'react-router-dom';
 import AddFriends from './AddFriends';
 
 beforeEach(() => {
+    vi.clearAllMocks(); // Clean slate for every test
     const mockUser = JSON.stringify({ _id: '123', firstName: 'Travis', lastName: 'Burns' });
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(mockUser);
 
-    // Mock the global fetch API
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ users: [] }),
+    });
 });
 
 describe('AddFriends Page Unit Tests', () => {
@@ -21,20 +24,12 @@ describe('AddFriends Page Unit Tests', () => {
         );
 
         const input = screen.getByPlaceholderText(/Search username/i);
-
         fireEvent.change(input, { target: { value: 'cool_user' } });
 
-        await waitFor(() => {
-            expect(input.value).toBe('cool_user');
-        });
+        expect(input.value).toBe('cool_user');
     });
 
     it('displays "No users found" by default with an empty list', async () => {
-        global.fetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ users: [] }),
-        });
-
         render(
             <BrowserRouter>
                 <AddFriends />
@@ -47,12 +42,17 @@ describe('AddFriends Page Unit Tests', () => {
     });
 
     it('shows success message after sending a friend request', async () => {
-        // 1. Mock the initial search results
-        global.fetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({
-                users: [{ _id: '456', username: 'target_user' }]
-            }),
+        global.fetch = vi.fn().mockImplementation((url) => {
+            if (url.includes('api/friends')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({ friends: [] }) // Response for fetchFriends
+                });
+            }
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({ users: [] }) // Default for fetchUsers
+            });
         });
 
         render(
@@ -61,21 +61,30 @@ describe('AddFriends Page Unit Tests', () => {
             </BrowserRouter>
         );
 
-        // 2. Find the "Send" button (Updated from /add/i to /send/i)
-        const sendBtn = await screen.findByRole('button', { name: /send/i });
-
-        // 3. Mock the POST request for sending the request
         global.fetch.mockResolvedValueOnce({
             ok: true,
-            json: async () => ({ message: 'Request Sent' }),
+            json: async () => ({
+                users: [{ _id: '456', username: 'target_user', firstName: 'Target', lastName: 'User' }]
+            }),
+        });
+
+        const input = screen.getByPlaceholderText(/Search username/i);
+        fireEvent.change(input, { target: { value: 'target_user' } });
+
+        const searchBtn = screen.getByRole('button', { name: /find/i });
+        fireEvent.click(searchBtn);
+
+        const sendBtn = await screen.findByRole('button', { name: /send/i });
+
+        global.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({ friendshipId: 'mock_id', message: 'Friend request sent to @target_user!' }),
         });
 
         fireEvent.click(sendBtn);
 
-        // 4. Verify success message and wait for state to settle (clears act warning)
         await waitFor(() => {
-            // Match this text to whatever your API/UI actually displays
-            expect(screen.getByText(/Request Sent/i)).toBeInTheDocument();
+            expect(screen.getByText(/Friend request sent to @target_user!/i)).toBeInTheDocument();
         });
     });
 
