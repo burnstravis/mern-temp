@@ -585,8 +585,8 @@ exports.setApp = function (app, client, io) {
         
         let jwtToken = req.headers['authorization'];
         
-        const senderID = req.query.senderId || req.body?.senderId;
-        const conversationID = req.query.conversationId || req.body?.conversationId;
+        const senderID = req.query.senderID;
+        const conversationID = req.query.conversationID;
 
         if (!senderID || !conversationID|| !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
