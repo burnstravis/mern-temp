@@ -248,9 +248,15 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
                     className={styles.acceptBtn}
                     onClick={(e) => {
                       e.stopPropagation();
-                      const idToUse = notification.requesterId || notification._id;
-                      const firstName = notification.senderFirstName || "A";
-                      const lastName = notification.senderLastName || "Friend";
+
+                      const idToUse = notification.requesterId;
+                      const firstName = notification.senderFirstName || "Friend";
+                      const lastName = notification.senderLastName || "";
+
+                      if (!idToUse) {
+                        console.error("No requesterId found on this notification:", notification);
+                        return;
+                      }
 
                       openChatWith(idToUse, firstName, lastName);
                     }}
