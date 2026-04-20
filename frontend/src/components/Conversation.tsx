@@ -1,10 +1,9 @@
 import { buildPath } from './path';
 import { retrieveToken, storeToken } from '../tokenStorage';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from '../pages/ConversationsPage.module.css'
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
-
 
 function Conversation() {
     const navigate = useNavigate();
@@ -14,21 +13,20 @@ function Conversation() {
     const hasFetched = useRef(false);
     const [conversations, setConversations] = useState<any[]>([]);
     const [message, setMessage] = useState('');
-    const [inputText, setInputText] = useState(''); // Track typing
+    const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(false);
     const [prompt, setPrompt] = useState('');
-    const scrollRef = useRef<HTMLDivElement>(null); // Create the ref
-    const socketRef = useRef<Socket | null>(null); // To store the socket instance
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const socketRef = useRef<Socket | null>(null);
 
     const _ud = localStorage.getItem('user_data');
     const ud = _ud ? JSON.parse(_ud) : { id: null };
     const userId = ud._id || ud.id;
 
-    const friendFullName = state.name;
+    const friendFullName = state?.name || "Friend";
 
     async function getConvId(): Promise<string | null> {
         if (state?.conversationId) return state.conversationId;
-
         try {
             const token = retrieveToken();
             const response = await fetch(buildPath('api/conversations'), {
@@ -51,9 +49,7 @@ function Conversation() {
 
             const response = await fetch(`${buildPath('api/messages')}?conversationID=${convId}&senderID=${userId}`, {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             const res = await response.json();
@@ -93,10 +89,11 @@ function Conversation() {
 
             const res = await response.json();
 
-            if (response.ok && res.newMessage) {
+            // FIX: Your backend returns 'message', not 'newMessage'
+            if (response.ok && res.message) {
                 setConversations((prev) => [
                     ...prev,
-                    { ...res.newMessage, fromSender: true }
+                    { ...res.message, fromSender: true }
                 ]);
                 setInputText('');
             }
@@ -142,7 +139,15 @@ function Conversation() {
         fetchRandomPrompt();
 
         const token = retrieveToken();
-        const socket = io(buildPath(""), { auth: { token } });
+
+        // FIX: Socket should connect to the base URL, not the /api path
+        const socketURL = buildPath("").split('/api')[0];
+
+        const socket = io(socketURL, {
+            auth: { token },
+            transports: ['websocket'] // FIX: Force websocket to stop the polling loop
+        });
+
         socketRef.current = socket;
 
         socket.on('connect', async () => {
@@ -154,11 +159,13 @@ function Conversation() {
 
         socket.on('message:new', (newMessage: any) => {
             setConversations((prev) => {
-                if (prev.some(m => m._id === newMessage._id)) return prev;
+                // Handle both possible ID names
+                const incomingId = newMessage._id || newMessage.id;
+                if (prev.some(m => (m._id || m.id) === incomingId)) return prev;
 
                 return [...prev, {
                     ...newMessage,
-                    fromSender: newMessage.senderId === userId || newMessage.senderID === userId
+                    fromSender: (newMessage.senderId || newMessage.senderID) === userId
                 }];
             });
         });
@@ -168,7 +175,7 @@ function Conversation() {
             socket.disconnect();
             hasFetched.current = false;
         };
-    }, [friendId]); // Re-run when switching friends
+    }, [friendId]);
 
 
     useEffect(() => {
@@ -207,7 +214,7 @@ function Conversation() {
                     <div className={styles.messages} ref={scrollRef}>
                         {conversations.map((msg) => (
                             <div
-                                key={msg._id}
+                                key={msg._id || msg.id}
                                 className={`${styles.conversationMessage} ${msg.fromSender ? styles.sent : styles.received}`}
                             >
                                 <p id={styles.conversationText}>{msg.text}</p>
@@ -241,7 +248,5 @@ function Conversation() {
         </div>
     );
 }
-
-
 
 export default Conversation;

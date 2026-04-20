@@ -10,7 +10,7 @@ exports.setApp = function (app, client, io) {
 
     const emitMessageEvent = (conversationId, payload) => {
         if (!io || !conversationId) return;
-        io.to(`conversation:${conversationId}`).emit('message:new', payload);
+        io.to(conversationId).emit('message:new', payload);
     };
 
     const emitConversationEvent = (participantIds, payload) => {

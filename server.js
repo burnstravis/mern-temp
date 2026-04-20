@@ -72,12 +72,12 @@ io.on('connection', (socket) => {
 
     socket.on('join:conversation', (conversationId) => {
         if (!conversationId) return;
-        socket.join(`conversation:${conversationId}`);
+        socket.join(conversationId);
     });
 
     socket.on('leave:conversation', (conversationId) => {
         if (!conversationId) return;
-        socket.leave(`conversation:${conversationId}`);
+        socket.leave(conversationId);
     });
 });
 
