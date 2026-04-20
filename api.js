@@ -511,10 +511,12 @@ exports.setApp = function (app, client, io) {
         
         let jwtToken = req.headers['authorization'];
         
-        const { senderID, conversationID, message} = req.body;
+        const senderId = req.body.senderId || req.body.senderID;
+        const conversationId = req.body.conversationId || req.body.conversationID;
+        const { message } = req.body;
 
-        if (!senderID || !conversationID || !message || !jwtToken) {
-            return res.status(400).json({ error: 'senderID, conversationID, message, and token are required.', accessToken: '' });
+        if (!senderId || !conversationId || !message || !jwtToken) {
+            return res.status(400).json({ error: 'senderId, conversationId, message, and token are required.', accessToken: '' });
         }
 
         try {
@@ -525,14 +527,14 @@ exports.setApp = function (app, client, io) {
             }
 
             const db = client.db('large_project');
-            const senderObjectId = new ObjectId(senderID);
-            const conversationObjectId = new ObjectId(conversationID);
+            const senderObjectId = new ObjectId(senderId);
+            const conversationObjectId = new ObjectId(conversationId);
 
             const createdAt = new Date();
 
             const messageInsert = await db.collection('messages').insertOne({
-                conversationId: conversationID,
-                senderId: senderID,
+                conversationId: conversationId,
+                senderId: senderId,
                 text: message,
                 createdAt: createdAt
             });
@@ -544,8 +546,8 @@ exports.setApp = function (app, client, io) {
 
             const createdMessage = {
                 _id: messageInsert.insertedId.toString(),
-                conversationId: conversationID,
-                senderId: senderID,
+                conversationId: conversationId,
+                senderId: senderId,
                 text: message,
                 createdAt,
                 fromSender: true
@@ -553,9 +555,9 @@ exports.setApp = function (app, client, io) {
 
             const convo = await db.collection('conversations').findOne({ _id: conversationObjectId });
             if (convo) {
-                emitMessageEvent(conversationID, createdMessage);
+                emitMessageEvent(conversationId, createdMessage);
                 emitConversationEvent(convo.participants, {
-                    conversationId: conversationID,
+                    conversationId: conversationId,
                     lastMessage: message,
                     lastMessageAt: createdAt
                 });
@@ -585,11 +587,11 @@ exports.setApp = function (app, client, io) {
         
         let jwtToken = req.headers['authorization'];
         
-        const senderID = req.query.senderID;
-        const conversationID = req.query.conversationID;
+        const senderId = req.query.senderId || req.query.senderID;
+        const conversationId = req.query.conversationId || req.query.conversationID;
 
-        if (!senderID || !conversationID|| !jwtToken) {
-            return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
+        if (!senderId || !conversationId || !jwtToken) {
+            return res.status(400).json({ error: 'senderId, conversationId, and token are required.', accessToken: '' });
         }
 
         try {
@@ -601,17 +603,24 @@ exports.setApp = function (app, client, io) {
 
             const db = client.db('large_project');
 
-            const senderObjectId = new ObjectId(senderID);
+            const senderObjectId = new ObjectId(senderId);
 
             const messages = await db.collection('messages')
-                .find({ conversationId: req.params.conversationId })
+                .find({
+                    $or: [
+                        { conversationId: conversationId },
+                        { conversationid: conversationId }
+                    ]
+                })
                 .sort({ createdAt: 1 })
                 .toArray();
 
             const taggedMessages = messages.map(msg => {
-                const msgSender = msg.senderId;
+                const msgSender = msg.senderId || msg.senderid;
                 return {
                     ...msg,
+                    conversationId: msg.conversationId || msg.conversationid,
+                    senderId: msg.senderId || msg.senderid,
                     fromSender: msgSender ? msgSender.toString() === senderObjectId.toString() : false
                     };
             });
