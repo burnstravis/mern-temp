@@ -14,6 +14,7 @@ function Conversation() {
     const [message, setMessage] = useState('');
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isGeneratingReply, setIsGeneratingReply] = useState(false);
     const [prompt, setPrompt] = useState('');
     const scrollRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<Socket | null>(null);
@@ -193,6 +194,49 @@ function Conversation() {
         }
     }
 
+    async function generateSmartReply(): Promise<void> {
+        if (isGeneratingReply) return;
+
+        setIsGeneratingReply(true);
+
+        try {
+            const token = retrieveToken();
+            const convId = await getConvId();
+
+            if (!convId) {
+                setMessage('Unable to generate smart reply: conversation not found.');
+                return;
+            }
+
+            const response = await fetch(buildPath(`api/conversations/${convId}/smart-reply`), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const res = await response.json();
+
+            if (res.accessToken) {
+                storeToken({ accessToken: res.accessToken });
+            }
+
+            if (res.error) {
+                setMessage(res.error);
+                return;
+            }
+
+            if (res.suggestion) {
+                setInputText(res.suggestion);
+            }
+        } catch (e) {
+            setMessage('Failed to generate smart reply.');
+        } finally {
+            setIsGeneratingReply(false);
+        }
+    }
+
     return (
         <div className={styles.conversationView}>
             {loading ? (
@@ -225,10 +269,24 @@ function Conversation() {
                         ))}
                     </div>
                     <div className={styles.messageInputWrapper}>
+                        <button
+                            type="button"
+                            className={styles.smartReplyButton}
+                            onClick={generateSmartReply}
+                            disabled={isGeneratingReply}
+                        >
+                            Smart Reply
+                        </button>
                         <input type="text" id={styles.messageInputText} placeholder="message" value={inputText}
                                onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} />
                         <button type="button" id={styles.messageInputButton} onClick={sendMessage} disabled={!inputText.trim()}>Send</button>
                     </div>
+                    {isGeneratingReply ? (
+                        <div className={styles.generatingRow}>
+                            <span className={styles.generatingSpinner} aria-hidden="true" />
+                            <span className={styles.generatingText}>generating...</span>
+                        </div>
+                    ) : null}
                 </>
             )}
         </div>
