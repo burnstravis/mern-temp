@@ -99,11 +99,8 @@ function Conversation() {
         if (socketRef.current?.connected) return;
 
         const token = retrieveToken();
-        const isProduction = window.location.hostname !== 'localhost';
 
-        const socketURL = isProduction
-            ? 'https://largeproject.nathanfoss.me' // Browser converts https to wss:// internally
-            : 'http://localhost:3000';
+        const socketURL = 'https://largeproject.nathanfoss.me';
 
         const socket = io(socketURL, {
             auth: { token: `Bearer ${token}` },
