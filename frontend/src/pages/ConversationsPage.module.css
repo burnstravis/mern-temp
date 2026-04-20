@@ -43,6 +43,22 @@
     text-align: center;
 }
 
+.birthdayBadge {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto 12px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f0a500, #ffd56a);
+    color: #2e2a5e;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+}
+
 .todaysPrompt {
     display: flex;
     flex-direction: column;

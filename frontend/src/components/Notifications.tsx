@@ -9,7 +9,7 @@ import styles from '../pages/FriendsPage.module.css';
 interface Notification {
   _id: string;
   recipientId: string;
-  type: 'friend_request' | 'alert' | 'birthday' | 'support_received' | 'birthday_wish_received' | 'support_needed';
+  type: 'friend_request' | 'alert' | 'birthday' | 'birthday_reminder' | 'support_received' | 'birthday_wish_received' | 'support_needed';
   requesterId: string;
   content: string;
   message?: string;
@@ -28,6 +28,7 @@ const notificationIcon = (type: Notification['type']): string => {
   switch (type) {
     case 'friend_request':          return '👤';
     case 'birthday':                return '🎂';
+    case 'birthday_reminder':       return '🎂';
     case 'alert':                   return '🤝';
     case 'support_received':        return '💙';
     case 'support_needed':          return '👋';
@@ -45,6 +46,7 @@ const notificationLabel = (type: Notification['type'], content?: string): string
   switch (type) {
     case 'friend_request':          return 'New friend request';
     case 'birthday':                return "Birthday notification";
+    case 'birthday_reminder':       return "Birthday reminder";
     case 'alert':                   return "Support alert";
     case 'support_received':        return "Support received";
     case 'birthday_wish_received':  return "Birthday wish received";

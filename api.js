@@ -8,6 +8,143 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.setApp = function (app, client, io) {
 
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+    const parseBirthdayDate = (birthdayValue) => {
+        if (!birthdayValue) return null;
+
+        if (birthdayValue instanceof Date) {
+            return Number.isNaN(birthdayValue.getTime()) ? null : birthdayValue;
+        }
+
+        const rawBirthday = String(birthdayValue).trim();
+        if (!rawBirthday) return null;
+
+        const directParsedDate = new Date(rawBirthday);
+        if (!Number.isNaN(directParsedDate.getTime())) {
+            return directParsedDate;
+        }
+
+        const monthDayYearMatch = rawBirthday.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+        if (!monthDayYearMatch) return null;
+
+        const [, month, day, year] = monthDayYearMatch;
+        const parsedDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+
+        return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+    };
+
+    const getBirthdayReminderInfo = (birthdayValue, referenceDate = new Date()) => {
+        const birthdayDate = parseBirthdayDate(birthdayValue);
+        if (!birthdayDate) return null;
+
+        const birthdayMonth = birthdayDate.getUTCMonth();
+        const birthdayDay = birthdayDate.getUTCDate();
+
+        const currentYear = referenceDate.getUTCFullYear();
+        const todayUtc = Date.UTC(currentYear, referenceDate.getUTCMonth(), referenceDate.getUTCDate());
+
+        let reminderYear = currentYear;
+        let birthdayUtc = Date.UTC(reminderYear, birthdayMonth, birthdayDay);
+
+        if (birthdayUtc < todayUtc) {
+            reminderYear += 1;
+            birthdayUtc = Date.UTC(reminderYear, birthdayMonth, birthdayDay);
+        }
+
+        const birthdayOccurrence = new Date(birthdayUtc);
+        if (
+            birthdayOccurrence.getUTCMonth() !== birthdayMonth ||
+            birthdayOccurrence.getUTCDate() !== birthdayDay
+        ) {
+            return null;
+        }
+
+        const daysUntilBirthday = Math.round((birthdayUtc - todayUtc) / MS_PER_DAY);
+
+        if (daysUntilBirthday === 0) {
+            return { stage: 'day_of', reminderYear };
+        }
+
+        if (daysUntilBirthday === 7) {
+            return { stage: 'week_before', reminderYear };
+        }
+
+        return null;
+    };
+
+    const buildBirthdayReminderContent = (friend, stage) => {
+        const friendName = [friend?.firstName, friend?.lastName].filter(Boolean).join(' ').trim() || 'Your friend';
+
+        if (stage === 'day_of') {
+            return `${friendName}'s birthday is today!`;
+        }
+
+        return `${friendName}'s birthday is in a week.`;
+    };
+
+    const ensureBirthdayReminders = async (db, recipientObjectId) => {
+        const friendshipDocs = await db.collection('friendships').find({
+            $or: [
+                { requesterId: recipientObjectId },
+                { recipientId: recipientObjectId }
+            ],
+            status: 'accepted'
+        }).toArray();
+
+        if (!friendshipDocs.length) return;
+
+        const friendIds = friendshipDocs
+            .map((friendship) => {
+                if (friendship.requesterId?.toString() === recipientObjectId.toString()) {
+                    return friendship.recipientId;
+                }
+
+                return friendship.requesterId;
+            })
+            .filter(Boolean);
+
+        if (!friendIds.length) return;
+
+        const friends = await db.collection('users').find({ _id: { $in: friendIds } })
+            .project({ firstName: 1, lastName: 1, birthday: 1 })
+            .toArray();
+
+        const today = new Date();
+        const reminderNotifications = [];
+
+        for (const friend of friends) {
+            const reminderInfo = getBirthdayReminderInfo(friend.birthday, today);
+            if (!reminderInfo) continue;
+
+            const { stage, reminderYear } = reminderInfo;
+            const existingReminder = await db.collection('notifications').findOne({
+                recipientId: recipientObjectId,
+                type: 'birthday_reminder',
+                relatedId: friend._id,
+                reminderStage: stage,
+                reminderYear: reminderYear
+            });
+
+            if (existingReminder) continue;
+
+            reminderNotifications.push({
+                recipientId: recipientObjectId,
+                type: 'birthday_reminder',
+                content: buildBirthdayReminderContent(friend, stage),
+                createdAt: today,
+                isRead: false,
+                relatedId: friend._id,
+                reminderStage: stage,
+                reminderYear: reminderYear
+            });
+        }
+
+        if (reminderNotifications.length > 0) {
+            await db.collection('notifications').insertMany(reminderNotifications);
+        }
+    };
+
     const emitMessageEvent = (conversationId, payload) => {
         if (!io || !conversationId) return;
         io.to(`conversation:${conversationId}`).emit('message:new', payload);
@@ -689,6 +826,8 @@ exports.setApp = function (app, client, io) {
             return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
         }
 
+        await ensureBirthdayReminders(db, new ObjectId(userId));
+
         const userObjectId = new ObjectId(userId);
 
         const notifications = await db.collection('notifications')
@@ -860,7 +999,8 @@ exports.setApp = function (app, client, io) {
                                     // ONLY include safe fields here
                                     firstName: "$$match.firstName",
                                     lastName: "$$match.lastName",
-                                    username: "$$match.username"
+                                    username: "$$match.username",
+                                    birthday: "$$match.birthday"
                                 }
                             }
                         }
@@ -881,6 +1021,70 @@ exports.setApp = function (app, client, io) {
         } catch (e) {
             console.error("Get Conversations Error:", e);
             res.status(500).json({ error: "Internal server error" });
+        }
+    });
+
+    app.get('/api/friend-profile/:friendId', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.', accessToken: '' });
+        }
+
+        try {
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7);
+            }
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.', accessToken: '' });
+            }
+
+            const friendId = req.params.friendId;
+            if (!ObjectId.isValid(friendId)) {
+                return res.status(400).json({ error: 'Invalid friend ID.', accessToken: '' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const friendObjectId = new ObjectId(friendId);
+            const db = client.db('large_project');
+
+            const friendship = await db.collection('friendships').findOne({
+                $or: [
+                    { requesterId: userId, recipientId: friendObjectId },
+                    { requesterId: friendObjectId, recipientId: userId }
+                ],
+                status: 'accepted'
+            });
+
+            if (!friendship) {
+                return res.status(404).json({ error: 'Friend not found.', accessToken: '' });
+            }
+
+            const friend = await db.collection('users').findOne(
+                { _id: friendObjectId },
+                { projection: { firstName: 1, lastName: 1, birthday: 1, username: 1 } }
+            );
+
+            if (!friend) {
+                return res.status(404).json({ error: 'Friend not found.', accessToken: '' });
+            }
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({
+                error: '',
+                friend: {
+                    _id: friend._id,
+                    firstName: friend.firstName,
+                    lastName: friend.lastName,
+                    username: friend.username,
+                    birthday: friend.birthday || ''
+                },
+                accessToken: refreshed.accessToken
+            });
+        } catch (e) {
+            res.status(500).json({ error: e.toString(), accessToken: '' });
         }
     });
 
@@ -1135,6 +1339,8 @@ exports.setApp = function (app, client, io) {
             if (!recipientId) {
                 return res.status(400).json({ error: 'Invalid token payload.', accessToken: '' });
             }
+
+            await ensureBirthdayReminders(db, new ObjectId(recipientId));
 
             const notifications = await db.collection('notifications').find({
                 recipientId: new ObjectId(recipientId),

@@ -16,6 +16,7 @@ function Conversation() {
     const [loading, setLoading] = useState(false);
     const [isGeneratingReply, setIsGeneratingReply] = useState(false);
     const [prompt, setPrompt] = useState('');
+    const [friendBirthdayToday, setFriendBirthdayToday] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<Socket | null>(null);
 
@@ -27,6 +28,75 @@ function Conversation() {
     const userId = (ud._id || ud.id)?.toString();
 
     const friendFullName = state?.name || "Friend";
+
+    const extractBirthdayParts = (birthday?: string): { month: number; day: number } | null => {
+        if (!birthday) return null;
+
+        const normalizedBirthday = birthday.trim().split('T')[0];
+        const yearMonthDayMatch = normalizedBirthday.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (yearMonthDayMatch) {
+            return {
+                month: Number(yearMonthDayMatch[2]) - 1,
+                day: Number(yearMonthDayMatch[3])
+            };
+        }
+
+        const monthDayYearMatch = normalizedBirthday.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+        if (monthDayYearMatch) {
+            return {
+                month: Number(monthDayYearMatch[1]) - 1,
+                day: Number(monthDayYearMatch[2])
+            };
+        }
+
+        const parsedBirthday = new Date(normalizedBirthday);
+        if (Number.isNaN(parsedBirthday.getTime())) return null;
+
+        return {
+            month: parsedBirthday.getUTCMonth(),
+            day: parsedBirthday.getUTCDate()
+        };
+    };
+
+    const isBirthdayToday = (birthday?: string): boolean => {
+        const birthdayParts = extractBirthdayParts(birthday);
+        if (!birthdayParts) return false;
+
+        const today = new Date();
+        return birthdayParts.month === today.getMonth() && birthdayParts.day === today.getDate();
+    };
+
+    const formatBirthdayLabel = (birthday?: string): string => {
+        const birthdayParts = extractBirthdayParts(birthday);
+        if (!birthdayParts) return '';
+
+        const birthdayDate = new Date(Date.UTC(2000, birthdayParts.month, birthdayParts.day));
+        return birthdayDate.toLocaleDateString([], { month: 'long', day: 'numeric' });
+    };
+
+    const loadFriendProfile = useCallback(async () => {
+        if (!friendId) return;
+
+        try {
+            const token = retrieveToken();
+            const response = await fetch(buildPath(`api/friend-profile/${friendId}`), {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const res = await response.json();
+
+            if (response.ok && res.friend) {
+                setFriendBirthdayToday(isBirthdayToday(res.friend.birthday));
+            } else {
+                setFriendBirthdayToday(false);
+            }
+
+            if (res.accessToken) storeToken({ accessToken: res.accessToken });
+        } catch {
+            setFriendBirthdayToday(false);
+        }
+    }, [friendId]);
 
     const getConvId = useCallback(async (): Promise<string | null> => {
         if (!friendId) return null;
@@ -160,6 +230,10 @@ function Conversation() {
     }, [friendId, userId, getConvId, loadConversations, fetchRandomPrompt]); // Keep dependencies minimal
 
     useEffect(() => {
+        loadFriendProfile();
+    }, [loadFriendProfile]);
+
+    useEffect(() => {
         let isMounted = true;
 
         const loadPrompt = async () => {
@@ -251,6 +325,8 @@ function Conversation() {
         }
     }
 
+    const birthdayLabel = formatBirthdayLabel((state as any)?.birthday);
+
     return (
         <div className={styles.conversationView}>
             {loading ? (
@@ -264,6 +340,11 @@ function Conversation() {
                 <>
                     <div className={styles.conversationHeader}>
                         <h1 className={styles.messageReceiverName}>{friendFullName}</h1>
+                        {friendBirthdayToday && (
+                            <div className={styles.birthdayBadge} title={birthdayLabel ? `Birthday: ${birthdayLabel}` : 'Birthday today'}>
+                                🎂 Birthday today
+                            </div>
+                        )}
                         <div className={styles.todaysPrompt}>
                             <p id={styles.promptHeader}>Today's Prompt</p>
                             <p id={styles.promptMessage}>{prompt}</p>
