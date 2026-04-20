@@ -900,8 +900,8 @@ exports.setApp = function (app, client, io) {
                 userId: userId,
                 date: today
             });
-            if (usageCount >= 2) {
-                return res.status(429).json({ error: 'You have used both smart replies for today in this conversation.' });
+            if (usageCount >= 5) {
+                return res.status(429).json({ error: 'You have used up your 5 smart replies for today in this conversation.' });
             }
 
             // 3. Fetch last 20 messages
