@@ -18,7 +18,7 @@ function Conversation() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const socketRef = useRef<Socket | null>(null);
 
-    const lastFetchedFriend = useRef<string | undefined>(undefined);
+    //const lastFetchedFriend = useRef<string | undefined>(undefined);
 
     const _ud = localStorage.getItem('user_data');
     const ud = _ud ? JSON.parse(_ud) : { id: null };
@@ -95,38 +95,52 @@ function Conversation() {
             return;
         }
 
-        if (lastFetchedFriend.current === friendId) return;
-        lastFetchedFriend.current = friendId;
-
-        setConversations([]);
-        setMessage('');
+        // Prevents redundant connections if the component re-renders
+        if (socketRef.current?.connected) return;
 
         const token = retrieveToken();
-        const socketURL = buildPath("").split('/api')[0];
+        const socketURL = buildPath("");
+
         const socket = io(socketURL, {
-            auth: { token },
-            transports: ['websocket']
+            auth: { token: `Bearer ${token}` },
+            transports: ['websocket'],
+            // Helps avoid issues with rapid mount/unmount in Dev
+            reconnection: true,
+            reconnectionAttempts: 5
         });
+
         socketRef.current = socket;
 
-        const initializeChat = async () => {
+        socket.on('connect', async () => {
+            console.log("Connected to Socket on 3000");
             const convId = await getConvId();
             if (convId) {
+                // Send raw ID, server adds "conversation:" prefix
                 socket.emit('join:conversation', convId);
                 loadConversations(convId);
+                console.log("loading conversations");
             }
-        };
+        });
 
-        socket.on('connect', initializeChat);
-
-        socket.on('message:new', (newMessage: any) => {
+        socket.on('message:new', (newMessage) => {
             setConversations((prev) => {
-                const incomingId = newMessage._id || newMessage.id;
-                if (prev.some(m => (m._id || m.id) === incomingId)) return prev;
+                const incomingId = (newMessage._id || newMessage.id)?.toString();
+
+                // Check against IDs
+                if (prev.some(m => (m._id || m.id)?.toString() === incomingId)) {
+                    return prev;
+                }
+
+                // ADDITIONAL CHECK: If the ID is missing (temp message) check text/sender/time
+                // This prevents double-rendering if the socket is faster than the HTTP response
+                if (prev.some(m => m.text === newMessage.text &&
+                    m.senderId === newMessage.senderId &&
+                    Math.abs(new Date(m.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 2000)) {
+                    return prev;
+                }
 
                 return [...prev, {
                     ...newMessage,
-                    // Use string comparison to avoid ObjectId mismatches
                     fromSender: newMessage.senderId?.toString() === userId
                 }];
             });
@@ -135,13 +149,15 @@ function Conversation() {
         fetchRandomPrompt();
 
         return () => {
-            socket.off('connect');
-            socket.off('message:new');
-            socket.disconnect();
-            socketRef.current = null;
-            lastFetchedFriend.current = undefined; // Reset to allow re-entry
+            // Only disconnect if we are actually unmounting for real
+            if (socketRef.current) {
+                socket.off('connect');
+                socket.off('message:new');
+                socket.disconnect();
+                socketRef.current = null;
+            }
         };
-    }, [friendId, getConvId, loadConversations, fetchRandomPrompt, navigate, userId, _ud]);
+    }, [friendId, userId]); // Keep dependencies minimal
 
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -149,6 +165,9 @@ function Conversation() {
 
     async function sendMessage(): Promise<void> {
         if (!inputText.trim()) return;
+        const textToSend = inputText;
+        setInputText(''); // Clear UI immediately for "snappiness"
+
         try {
             const token = retrieveToken();
             const convId = await getConvId();
@@ -158,18 +177,19 @@ function Conversation() {
                 body: JSON.stringify({
                     senderID: userId,
                     conversationID: convId,
-                    message: inputText
+                    message: textToSend
                 })
             });
-            const res = await response.json();
 
-            if (response.ok && res.message) {
-                // The API already tags 'fromSender: true' in the POST response
-                setConversations((prev) => [...prev, res.message]);
-                setInputText('');
-            }
+            const res = await response.json();
+            // REMOVE: setConversations((prev) => [...prev, res.message]);
+            // The socket listener below will handle adding this for you.
+
             if (res.accessToken) storeToken({ accessToken: res.accessToken });
-        } catch (e) { console.error("Send error", e); }
+        } catch (e) {
+            console.error("Send error", e);
+            setInputText(textToSend); // Put text back if send failed
+        }
     }
 
     return (
