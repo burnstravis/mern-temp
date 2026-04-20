@@ -40,44 +40,62 @@ class _ConversationPageState extends State<ConversationPage> {
     _initSocket();
   }
 
+  bool _isConnecting = false;
+
+  @override
   @override
   void dispose() {
+    // 1. Explicitly leave the room
     _socket.emit('leave:conversation', widget.conversationId);
+    // 2. Break the physical connection
+    _socket.disconnect();
+    // 3. Destroy the instance
     _socket.dispose();
+
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _initSocket() {
-    // Connect to your server (Use 10.0.2.2 for Android Emulator)
+  void _initSocket() async {
+    if (_isConnecting) return;
+    setState(() => _isConnecting = true);
+
+    final String? token = await TokenManager.getToken();
+
+    // Force a completely fresh manager for Linux to bypass cache
     _socket = IO.io('https://largeproject.nathanfoss.me', IO.OptionBuilder()
+        .setAuth({'token': 'Bearer $token'})
         .setTransports(['websocket'])
-        .setAuth({'token': TokenManager.getToken()})
+        .setPath('/socket.io/')
+    // Force the engine to create a new connection instead of reusing
+        .setQuery({'forceNew': 'true', 'timestamp': DateTime.now().millisecondsSinceEpoch.toString()})
+        .enableForceNew()
         .enableAutoConnect()
         .build());
 
     _socket.onConnect((_) {
-      debugPrint('Connected to WebSocket');
-      _socket.emit('join:conversation', 'conversation:${widget.conversationId}');
+      _socket.emit('join:conversation', widget.conversationId);
+      if (mounted) setState(() => _isConnecting = false);
     });
 
     _socket.on('message:new', (newMessage) {
       if (mounted) {
         setState(() {
-
-          bool alreadyExists = _messages.any((m) =>
-          m['_id'] == newMessage['_id'] ||
-              (m['text'] == newMessage['text'] && m['senderId'] == newMessage['senderId'])
-          );
-
-          if (!alreadyExists) {
+          final String incomingId = (newMessage['_id'] ?? newMessage['id'] ?? '').toString();
+          if (!_messages.any((m) => (m['_id'] ?? m['id'] ?? '').toString() == incomingId)) {
             _messages.insert(0, newMessage);
           }
         });
       }
     });
 
+    _socket.onConnectError((data) {
+      debugPrint('Socket Connection Error: $data');
+      if (mounted) setState(() => _isConnecting = false);
+    });
+
+    _socket.onDisconnect((reason) => print('DISCONNECTED: $reason'));
   }
 
   Future<void> _fetchMessages() async {
@@ -102,38 +120,25 @@ class _ConversationPageState extends State<ConversationPage> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    final String originalText = text;
     _messageController.clear();
 
-    // 1. Send to API
+    // Send to API only. The socket 'message:new' event will update our UI.
     final result = await ApiService.sendMessage(
       senderID: widget.currentUserId,
       conversationID: widget.conversationId,
       message: text,
     );
 
-    if (result.containsKey('error') && result['error'].isNotEmpty) {
+    if (result.containsKey('error') && result['error'] != null && result['error'].isNotEmpty) {
+      _messageController.text = originalText;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['error'])),
       );
-    } else {
-      // 2. MANUALLY UPDATE UI (If socket doesn't loop back to you)
-      // We create a temporary message object to show it immediately
-      if (mounted) {
-        setState(() {
-          final myNewMsg = {
-            '_id': DateTime.now().toString(), // Temp ID
-            'text': text,
-            'senderId': widget.currentUserId,
-            'createdAt': DateTime.now().toIso8601String(),
-          };
-
-          if (!_messages.any((m) => m['text'] == text && m['senderId'] == widget.currentUserId)) {
-            _messages.insert(0, myNewMsg);
-          }
-        });
-      }
     }
   }
+
+  // --- UI remains identical to your design ---
 
   Future<void> _fetchPrompt() async {
     final result = await ApiService.getRandomPrompt();
@@ -150,12 +155,14 @@ class _ConversationPageState extends State<ConversationPage> {
   }
 
   String _formatTime(String? isoDate) {
-    if (isoDate == null) return "";
-    final date = DateTime.parse(isoDate).toLocal();
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-    final ampm = date.hour >= 12 ? "PM" : "AM";
-    final minute = date.minute.toString().padLeft(2, '0');
-    return "$hour:$minute $ampm";
+    if (isoDate == null || isoDate.isEmpty) return "";
+    try {
+      final date = DateTime.parse(isoDate).toLocal();
+      final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+      final ampm = date.hour >= 12 ? "PM" : "AM";
+      final minute = date.minute.toString().padLeft(2, '0');
+      return "$hour:$minute $ampm";
+    } catch (e) { return ""; }
   }
 
   @override
@@ -164,30 +171,17 @@ class _ConversationPageState extends State<ConversationPage> {
       child: Column(
         children: [
           const SizedBox(height: 20),
-          Text(
-            "Friend Connector",
-            style: GoogleFonts.dancingScript(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            "Messages",
-            style: GoogleFonts.lora(fontSize: 18, fontStyle: FontStyle.italic, color: const Color(0xFFF0EDFF)),
-          ),
+          Text("Friend Connector", style: GoogleFonts.dancingScript(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold)),
+          Text("Messages", style: GoogleFonts.lora(fontSize: 18, fontStyle: FontStyle.italic, color: const Color(0xFFF0EDFF))),
           const SizedBox(height: 20),
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0EDFF),
-                borderRadius: BorderRadius.circular(20),
-              ),
+              decoration: BoxDecoration(color: const Color(0xFFF0EDFF), borderRadius: BorderRadius.circular(20)),
               child: Column(
                 children: [
                   _buildHeader(),
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _buildMessageList(),
-                  ),
+                  Expanded(child: _isLoading ? const Center(child: CircularProgressIndicator()) : _buildMessageList()),
                   _buildInputArea(),
                 ],
               ),
@@ -202,22 +196,13 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF3C3489),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20)),
-      ),
+      decoration: const BoxDecoration(color: Color(0xFF3C3489), borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20))),
       child: Column(
         children: [
           Row(
             children: [
               IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: widget.onBack),
-              Expanded(
-                child: Text(
-                  widget.displayName,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
+              Expanded(child: Text(widget.displayName, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))),
               const SizedBox(width: 48),
             ],
           ),
@@ -231,44 +216,21 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _buildPromptBox() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0A500),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFF0A500), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black.withOpacity(0.05), width: 1)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center, // Centers the "box" content
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            "Today's Prompt",
-            textAlign: TextAlign.center, // Centers the text lines if they wrap
-            style: GoogleFonts.lora(
-              fontWeight: FontWeight.bold,
-              fontStyle: FontStyle.italic,
-              fontSize: 14,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 6), // Space between header and prompt
-          Text(
-            _prompt,
-            textAlign: TextAlign.center, // Ensures long prompts wrap centered
-            style: GoogleFonts.lora(
-              fontSize: 16,
-              fontStyle: FontStyle.italic,
-              color: Colors.black.withOpacity(0.85),
-            ),
-          ),
+          Text("Today's Prompt", style: GoogleFonts.lora(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic, fontSize: 14, color: Colors.black)),
+          const SizedBox(height: 6),
+          Text(_prompt, textAlign: TextAlign.center, style: GoogleFonts.lora(fontSize: 16, fontStyle: FontStyle.italic, color: Colors.black.withOpacity(0.85))),
         ],
       ),
     );
   }
 
   Widget _buildMessageList() {
-    if (_messages.isEmpty) {
-      return const Center(child: Text("No messages yet. Say hi!"));
-    }
+    if (_messages.isEmpty) return const Center(child: Text("No messages yet. Say hi!"));
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
@@ -277,12 +239,7 @@ class _ConversationPageState extends State<ConversationPage> {
       itemBuilder: (context, index) {
         final msg = _messages[index];
         final bool isMe = msg['senderId'].toString() == widget.currentUserId.toString();
-
-        return _chatBubble(
-            msg['text'] ?? "",
-            isMe,
-            _formatTime(msg['createdAt'])
-        );
+        return _chatBubble(msg['text'] ?? "", isMe, _formatTime(msg['createdAt']));
       },
     );
   }
@@ -305,10 +262,7 @@ class _ConversationPageState extends State<ConversationPage> {
                 bottomRight: isMe ? Radius.zero : const Radius.circular(15),
               ),
             ),
-            child: Text(
-              text,
-              style: TextStyle(color: isMe ? Colors.white : Colors.black, fontSize: 16),
-            ),
+            child: Text(text, style: TextStyle(color: isMe ? Colors.white : Colors.black, fontSize: 16)),
           ),
           const SizedBox(height: 4),
           Text(time, style: const TextStyle(fontSize: 10, color: Color(0xFF3C3489))),
@@ -320,22 +274,14 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF3C3489),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20)),
-      ),
+      decoration: const BoxDecoration(color: Color(0xFF3C3489), borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20))),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _messageController,
               onSubmitted: (_) => _handleSend(),
-              decoration: InputDecoration(
-                fillColor: Colors.white,
-                filled: true,
-                hintText: "message",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              ),
+              decoration: InputDecoration(fillColor: Colors.white, filled: true, hintText: "message", border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
             ),
           ),
           const SizedBox(width: 8),
