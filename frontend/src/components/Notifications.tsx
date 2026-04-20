@@ -240,9 +240,9 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
         {notification.type === 'support_needed' && (
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexDirection: 'column' }}>
             {notification.message && (
-            <p style={{ margin: 0, fontSize: '13px', color: '#555' }}>{notification.message}</p>
+            <p className="cardSubtext" style={{ margin: 0 }}>{notification.message}</p>
             )}
-            <div className={styles.actionButtons}>
+            <div className={styles.actionButtons} style={{ justifyContent: 'center' }}>
               <button
                   className={styles.acceptBtn}
                   onClick={(e) => {
