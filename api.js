@@ -585,8 +585,8 @@ exports.setApp = function (app, client, io) {
         
         let jwtToken = req.headers['authorization'];
         
-        const senderID = req.query.senderID || req.body?.senderID;
-        const conversationID = req.query.conversationID || req.body?.conversationID;
+        const senderID = req.query.senderId || req.body?.senderId;
+        const conversationID = req.query.conversationId || req.body?.conversationId;
 
         if (!senderID || !conversationID|| !jwtToken) {
             return res.status(400).json({ error: 'senderID, conversationID, and token are required.', accessToken: '' });
@@ -863,6 +863,107 @@ exports.setApp = function (app, client, io) {
         } catch (e) {
             console.error("Get Conversations Error:", e);
             res.status(500).json({ error: "Internal server error" });
+        }
+    });
+
+    app.post('/api/conversations/:conversationId/smart-reply', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+        if (!jwtToken) return res.status(401).json({ error: 'No token provided.' });
+
+        try {
+            if (jwtToken.startsWith('Bearer ')) jwtToken = jwtToken.slice(7);
+            if (tokenHandler.isExpired(jwtToken)) return res.status(401).json({ error: 'Token expired.' });
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            const userId = new ObjectId(decoded.id);
+            const conversationId = new ObjectId(req.params.conversationId);
+            const db = client.db('large_project');
+
+            // 1. Verify user is a participant in this conversation
+            const conversation = await db.collection('conversations').findOne({
+                _id: conversationId,
+                participants: userId
+            });
+            if (!conversation) return res.status(403).json({ error: 'Not a participant in this conversation.' });
+
+            // 2. Check daily limit
+            const today = new Date().toISOString().split('T')[0];
+            const usageCount = await db.collection('ai_usage').countDocuments({
+                conversationId: conversationId,
+                userId: userId,
+                date: today
+            });
+            if (usageCount >= 2) {
+                return res.status(429).json({ error: 'You have used both smart replies for today in this conversation.' });
+            }
+
+            // 3. Fetch last 20 messages
+            const messages = await db.collection('messages')
+                .find({ conversationId: conversationId.toString() })
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .toArray();
+            messages.reverse();
+
+            console.log('Messages found:', messages.length);
+            // if (messages.length > 0) console.log('Sample message:', JSON.stringify(messages[0], null, 2));
+
+            // 4. Format messages for the LLM
+            const formattedHistory = messages.map(m => {
+                const role = m.senderId.toString() === userId.toString() ? 'You' : 'Friend';
+                return `${role}: ${m.text}`;
+            }).join('\n');
+
+            const systemPrompt = `You are a helpful assistant suggesting a reply in a friendly conversation. 
+            Be warm, natural, and concise. Only suggest one reply of 1-2 sentences. 
+            For your response do not ask questions, do not explain yourself, and do not add any preamble; 
+            Just give back the suggestion based on the previous messages.`;
+            
+
+            const userMessage = `Here is the conversation so far:\n${formattedHistory}.`;
+
+            // 5. Call the LLM
+            const llmResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    'HTTP-Referer': 'http://localhost:3000',
+                    'X-Title': 'Friend Connector'
+                },
+                body: JSON.stringify({
+                    model: 'meta-llama/llama-3.3-70b-instruct',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ],
+                    max_tokens: 150
+                })
+            });
+
+           const llmData = await llmResponse.json();
+           console.log('OpenRouter response:', JSON.stringify(llmData, null, 2));
+           console.log('Messages:', JSON.stringify(formattedHistory, null, 2));
+           const suggestion = llmData.choices?.[0]?.message?.content;
+           if (!suggestion) throw new Error('No response from LLM');
+
+            // 6. Record usage
+            await db.collection('ai_usage').insertOne({
+                conversationId: conversationId,
+                userId: userId,
+                date: today,
+                usedAt: new Date()
+            });
+
+            const refreshed = tokenHandler.refresh(jwtToken);
+            res.status(200).json({
+                suggestion: suggestion,
+                accessToken: refreshed.accessToken
+            });
+
+        } catch (e) {
+            console.error('Smart reply error:', e);
+            res.status(500).json({ error: e.toString() });
         }
     });
 
