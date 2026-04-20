@@ -13,6 +13,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
   final TextEditingController _searchController = TextEditingController();
 
   List<dynamic> _foundUsers = [];
+  Set<String> _friendIds = {};          // Added: Track existing friends
+  Set<String> _pendingRequestIds = {};  // Added: Track requests sent in this session
   bool _isLoading = false;
   String _message = '';
 
@@ -26,7 +28,29 @@ class _DiscoverPageState extends State<DiscoverPage> {
   @override
   void initState() {
     super.initState();
+    _loadInitialData();
+  }
+
+  // Added: Logic to fetch friends list before searching users
+  Future<void> _loadInitialData() async {
+    await _fetchFriends();
     _getUsers();
+  }
+
+  // Added: Fetch existing friends to filter them out of discovery
+  Future<void> _fetchFriends() async {
+    final result = await ApiService.friendsList();
+    if (result.containsKey('friends')) {
+      final myId = await ApiService.getUserIdFromToken();
+      if (mounted) {
+        setState(() {
+          _friendIds = (result['friends'] as List)
+              .map((f) => f['_id'].toString())
+              .toSet();
+          if (myId != null) _friendIds.add(myId); // Don't show self
+        });
+      }
+    }
   }
 
   @override
@@ -62,23 +86,46 @@ class _DiscoverPageState extends State<DiscoverPage> {
     }
   }
 
-  Future<void> _sendRequest(String username) async {
+  // Updated: Now accepts the full user object to handle IDs and notifications
+  Future<void> _sendRequest(dynamic user) async {
+    final String username = user['username'];
+    final String targetUserId = user['_id'].toString();
+
     setState(() => _message = 'Sending request...');
+
     final result = await ApiService.addFriend(username);
 
     if (mounted) {
-      setState(() {
-        if (result.containsKey('error') && result['error'].isNotEmpty) {
-          _message = result['error'];
-        } else {
-          _message = 'Friend request sent to @$username!';
+      if (result.containsKey('error') && result['error'].isNotEmpty) {
+        setState(() => _message = result['error']);
+      } else {
+        // Added: Notification logic matching web app
+        if (result['friendshipId'] != null) {
+          // Note: Logic follows web's sendFriendRequestNotification
+          final myId = await ApiService.getUserIdFromToken();
+          // We use a generic 'Someone' or you can fetch your user name from storage
+          await ApiService.createSupportRequest(
+              "Someone sent you a friend request!",
+              "friend_request"
+          );
         }
-      });
+
+        setState(() {
+          _pendingRequestIds.add(targetUserId);
+          _message = 'Friend request sent to @$username!';
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Added: Client-side filtering logic matching the web app
+    final filteredUsers = _foundUsers.where((user) {
+      final id = user['_id'].toString();
+      return !_friendIds.contains(id) && !_pendingRequestIds.contains(id);
+    }).toList();
+
     return SafeArea(
       child: Column(
         children: [
@@ -119,7 +166,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     style: GoogleFonts.lora(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        fontStyle: FontStyle.italic, // Matched to Messages
+                        fontStyle: FontStyle.italic,
                         color: const Color(0xFF3C3489)
                     ),
                   ),
@@ -128,19 +175,22 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   const SizedBox(height: 20),
                   if (_isLoading)
                     const Expanded(child: Center(child: CircularProgressIndicator(color: searchHeaderBg)))
-                  else if (_foundUsers.isEmpty)
+                  else if (filteredUsers.isEmpty)
                     Expanded(child: Center(child: Text(_message.isEmpty ? "No users found." : _message)))
                   else
                     Expanded(child: RefreshIndicator(
                         onRefresh: () => _getUsers(searchText: _searchController.text),
                         color: searchHeaderBg,
-                        child: _buildUserList()
+                        child: _buildUserList(filteredUsers)
                     )),
-                  if (!_isLoading && _foundUsers.isNotEmpty) _buildPaginationControls(),
-                  if (_message.isNotEmpty && _foundUsers.isNotEmpty)
+                  if (!_isLoading && filteredUsers.isNotEmpty) _buildPaginationControls(),
+                  // Fixed: Display message even if list is empty to show "Request Sent"
+                  if (_message.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
-                      child: Text(_message, style: const TextStyle(color: searchHeaderBg, fontWeight: FontWeight.bold)),
+                      child: Text(_message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: searchHeaderBg, fontWeight: FontWeight.bold, fontSize: 13)),
                     ),
                 ],
               ),
@@ -224,12 +274,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
     );
   }
 
-  Widget _buildUserList() {
+  Widget _buildUserList(List<dynamic> users) {
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _foundUsers.length,
+      itemCount: users.length,
       itemBuilder: (context, index) {
-        final user = _foundUsers[index];
+        final user = users[index];
 
         String fixCase(dynamic text) {
           String s = (text ?? "").toString().trim();
@@ -275,7 +325,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => _sendRequest(user['username']),
+                  onPressed: () => _sendRequest(user), // Updated to send object
                   style: ElevatedButton.styleFrom(
                     backgroundColor: findButtonOrange,
                     foregroundColor: Colors.black,

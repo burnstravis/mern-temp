@@ -1025,13 +1025,32 @@ exports.setApp = function (app, client, io) {
             if (friendships.length > 0) {
                 const friendNotifications = friendships.map(f => {
                     const friendId = f.requesterId.equals(userId) ? f.recipientId : f.requesterId;
+
+                    let dynamicContent = "";
+                    switch (type) {
+                        case "Encouragement":
+                            dynamicContent = `${fullName} could use some ${type}!`;
+                            break;
+                        case "Advice":
+                            dynamicContent = `${fullName} is looking for some ${type}.`;
+                            break;
+                        case "Chat":
+                            dynamicContent = `${fullName} wants to ${type}!`;
+                            break;
+                        case "Celebrate":
+                            dynamicContent = `${fullName} has something to ${type}!`;
+                            break;
+                        default:
+                            dynamicContent = `${fullName} needs some ${type}!`;
+                    }
+
                     return {
                         recipientId: friendId,
                         senderId: userId, // Better name than requesterId for a notification
                         senderFirstName: userFirstName, // Storing these helps the frontend
                         senderLastName: userLastName,
                         type: 'support_needed',
-                        content: `${fullName} needs some ${type}!`,  // keep as the label/header
+                        content: dynamicContent,
                         message: content,                              // user's typed message
                         createdAt: new Date(),
                         isRead: false,

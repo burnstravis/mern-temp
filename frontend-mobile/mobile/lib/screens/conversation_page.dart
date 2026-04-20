@@ -32,6 +32,7 @@ class _ConversationPageState extends State<ConversationPage> {
   bool _isLoading = true;
   String _prompt = "Loading...";
   bool _isConnecting = false;
+  bool _isGeneratingReply = false;
 
   @override
   void initState() {
@@ -39,6 +40,40 @@ class _ConversationPageState extends State<ConversationPage> {
     _fetchMessages();
     _fetchPrompt();
     _initSocket();
+  }
+
+  Future<void> _handleSmartReply() async {
+    if (_isGeneratingReply) return;
+
+    setState(() {
+      _isGeneratingReply = true;
+    });
+
+    try {
+      final result = await ApiService.getSmartReply(widget.conversationId);
+
+      if (mounted) {
+        if (result.containsKey('error') && result['error'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['error'])),
+          );
+        } else if (result.containsKey('suggestion')) {
+          setState(() {
+            _messageController.text = result['suggestion'];
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to generate smart reply.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingReply = false);
+      }
+    }
   }
 
   @override
@@ -269,28 +304,85 @@ class _ConversationPageState extends State<ConversationPage> {
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(color: Color(0xFF3C3489), borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20))),
-      child: Row(
+      decoration: const BoxDecoration(
+        color: Color(0xFF3C3489),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20), bottom: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              onSubmitted: (_) => _handleSend(),
-              // Ensure we scroll to the latest message when tapping the field
-              onTap: () {
-                 Timer(const Duration(milliseconds: 300), () {
-                   if (_scrollController.hasClients) {
-                     _scrollController.jumpTo(0);
-                   }
-                 });
-              },
-              decoration: InputDecoration(fillColor: Colors.white, filled: true, hintText: "message", border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
+          // "Generating..." indicator (matches your web app's generatingRow)
+          if (_isGeneratingReply)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "generating...",
+                    style: GoogleFonts.lora(fontSize: 12, color: Colors.white, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: BoxDecoration(color: const Color(0xFFF0A500), borderRadius: BorderRadius.circular(10)),
-            child: IconButton(onPressed: _handleSend, icon: const Icon(Icons.send, color: Colors.black)),
+          Row(
+            children: [
+              // Smart Reply Button
+              GestureDetector(
+                onTap: _isGeneratingReply ? null : _handleSmartReply,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: _isGeneratingReply ? Colors.grey : const Color(0xFFAFA9EC),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    "Smart Reply",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  onSubmitted: (_) => _handleSend(),
+                  onTap: () {
+                    Timer(const Duration(milliseconds: 300), () {
+                      if (_scrollController.hasClients) {
+                        _scrollController.jumpTo(0);
+                      }
+                    });
+                  },
+                  decoration: InputDecoration(
+                    fillColor: Colors.white,
+                    filled: true,
+                    hintText: "message",
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0A500),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: IconButton(
+                  onPressed: _handleSend,
+                  icon: const Icon(Icons.send, color: Colors.black),
+                ),
+              ),
+            ],
           ),
         ],
       ),

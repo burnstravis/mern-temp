@@ -379,6 +379,35 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> sendNotification({
+    required String recipientId,
+    required String type,
+    required String content,
+    required String relatedId,
+  }) async {
+    try {
+      final token = await TokenManager.getToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'recipientId': recipientId,
+          'type': type,
+          'content': content,
+          'relatedId': relatedId,
+        }),
+      );
+      final data = jsonDecode(response.body);
+      await _updateSession(data);
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> markNotificationRead(String notificationId) async {
     try {
       final token = await TokenManager.getToken();
@@ -400,8 +429,16 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> createSupportRequest(String content, String type) async {
+    // Optional: Frontend validation to match backend validTypes
+    const validTypes = ["Encouragement", "Advice", "Chat", "Celebrate"];
+    if (!validTypes.contains(type)) {
+      return {'error': 'Invalid type. Must be: Encouragement, Advice, Chat, or Celebrate.'};
+    }
+
     try {
       final token = await TokenManager.getToken();
+      if (token == null) return {'error': 'No token provided.'};
+
       final response = await http.post(
         Uri.parse('$_baseUrl/support-requests'),
         headers: {
@@ -415,8 +452,14 @@ class ApiService {
       );
 
       final Map<String, dynamic> data = jsonDecode(response.body);
+
       await _updateSession(data);
-      return data;
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to create support request'};
+      }
     } catch (e) {
       return {'error': 'Connection failed: $e'};
     }
@@ -474,7 +517,6 @@ class ApiService {
 
       final Map<String, dynamic> data = jsonDecode(response.body);
 
-      // Handle sliding session if token is returned
       await _updateSession(data);
 
       return data;
@@ -482,4 +524,27 @@ class ApiService {
       return {'error': 'Connection failed: $e'};
     }
   }
+
+  static Future<Map<String, dynamic>> getSmartReply(String conversationId) async {
+    try {
+      final token = await TokenManager.getToken();
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/conversations/$conversationId/smart-reply'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      await _updateSession(data);
+
+      return data;
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
 }

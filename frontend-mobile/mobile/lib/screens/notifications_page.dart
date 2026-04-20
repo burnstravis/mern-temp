@@ -35,12 +35,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Future<void> _loadNotifications() async {
     final result = await ApiService.getNotifications();
-    if (mounted) {
-      setState(() {
-        _notifications = result['notifications'] ?? [];
-        _isLoading = false;
-      });
-    }
+
+    // FIX: Check mounted before updating state
+    if (!mounted) return;
+
+    setState(() {
+      _notifications = result['notifications'] ?? [];
+      _isLoading = false;
+    });
   }
 
   String _formatDate(String? dateStr) {
@@ -55,26 +57,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Future<void> _handleOpenChat(dynamic notif) async {
     String type = (notif['type'] ?? "").toString();
-    String fullName = "Friend";
 
-    if (notif['content'] != null && notif['content'].toString().isNotEmpty) {
-      if (type == 'new_message') {
-        fullName = notif['content'].toString().replaceFirst("New message from ", "").split(':')[0].split(' ')[0];
-      } else {
-        fullName = notif['content'].toString().split(' ')[0];
-      }
-    }
+    // Aligns with React: senderFirstName + senderLastName
+    String firstName = notif['senderFirstName'] ?? "Friend";
+    String lastName = notif['senderLastName'] ?? "";
+    String fullName = "$firstName $lastName".trim();
 
     try {
-      if (type == 'new_message') {
-        String convId = notif['relatedId'] ?? "";
-        if (convId.isNotEmpty) {
-          widget.onOpenChat(convId, fullName);
-          _handleMarkRead(notif['_id']);
-        }
-      } else {
-        String friendId = notif['senderId'] ?? notif['requesterId'] ?? "";
-        if (friendId.isNotEmpty) {
+      // Determine ID to use (senderId per web app logic)
+      String friendId = notif['senderId'] ?? notif['requesterId'] ?? notif['relatedId'] ?? "";
+
+      if (friendId.isNotEmpty) {
+        if (type == 'new_message') {
+          String convId = notif['relatedId'] ?? "";
+          if (convId.isNotEmpty) {
+            widget.onOpenChat(convId, fullName);
+            _handleMarkRead(notif['_id']);
+          }
+        } else {
+          // Equivalent to openChatWith's POST to /api/conversations
           final res = await ApiService.startConversation(friendId);
           if (res.containsKey('conversationId')) {
             widget.onOpenChat(res['conversationId'], fullName);
@@ -93,7 +94,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     try {
       final res = await ApiService.acceptFriendRequest(friendshipId, friendshipId);
-      if (mounted && (res['error'] == null || res['error'] == "")) {
+
+      // FIX: Check mounted before updating state
+      if (!mounted) return;
+
+      if (res['error'] == null || res['error'] == "") {
         setState(() => _friendActions[notif['_id']] = 'accept');
         _handleMarkRead(notif['_id']);
       }
@@ -104,12 +109,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Future<void> _handleMarkRead(String id) async {
     await ApiService.markNotificationRead(id);
-    if (mounted) {
-      setState(() {
-        final index = _notifications.indexWhere((n) => n['_id'] == id);
-        if (index != -1) _notifications[index]['isRead'] = true;
-      });
-    }
+
+    // FIX: Check mounted before updating state
+    if (!mounted) return;
+
+    setState(() {
+      final index = _notifications.indexWhere((n) => n['_id'] == id);
+      if (index != -1) _notifications[index]['isRead'] = true;
+    });
   }
 
   String _getIcon(String type) {
@@ -151,11 +158,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
           const SizedBox(height: 20),
           Expanded(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20), // Updated to 20
-              padding: const EdgeInsets.all(20), // Standardized padding
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20), // Updated to 20
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
                 ],
@@ -167,7 +174,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     style: GoogleFonts.lora(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        fontStyle: FontStyle.italic, // Added italics to match other pages
+                        fontStyle: FontStyle.italic,
                         color: headerTextBlue
                     ),
                   ),
@@ -183,7 +190,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               ),
             ),
           ),
-          const SizedBox(height: 90), // Matched to 90 for nav bar consistency
+          const SizedBox(height: 90),
         ],
       ),
     );
@@ -214,18 +221,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
     bool isRead = notif['isRead'] ?? false;
     String type = (notif['type'] ?? "").toString();
     String? resolved = _friendActions[notif['_id']];
+    String? messageContent = notif['message'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(15), // Matched to 15 (standard for cards)
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(1, 2),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(1, 2)),
         ],
       ),
       child: Material(
@@ -275,16 +279,24 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       ),
                   ],
                 ),
-                if (type == 'friend_request' || type == 'support_needed' || type == 'new_message')
-                  const SizedBox(height: 15),
+                if (messageContent != null && messageContent.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    messageContent,
+                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.9)),
+                  ),
+                ],
+                const SizedBox(height: 15),
                 if (type == 'friend_request')
                   resolved == null
                       ? Row(children: [
                     Expanded(child: _buildActionBtn("Accept", () => _handleAcceptFriend(notif), actionButtonBg, Colors.black87)),
                     const SizedBox(width: 10),
                     Expanded(child: _buildActionBtn("Decline", () {
-                      setState(() => _friendActions[notif['_id']] = 'decline');
-                      _handleMarkRead(notif['_id']);
+                      if (mounted) {
+                        setState(() => _friendActions[notif['_id']] = 'decline');
+                        _handleMarkRead(notif['_id']);
+                      }
                     }, Colors.white12, Colors.white)),
                   ])
                       : Text(
@@ -293,7 +305,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ),
                 if (type == 'support_needed' || type == 'new_message')
                   _buildActionBtn(
-                      type == 'new_message' ? "Reply Now" : "Send Support",
+                      type == 'new_message' ? "Reply Now" : "Message Friend",
                           () => _handleOpenChat(notif),
                       actionButtonBg,
                       Colors.black87
@@ -315,7 +327,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           backgroundColor: bg,
           foregroundColor: text,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), // Standardized radius
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
         child: Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic)),
