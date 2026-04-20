@@ -1031,7 +1031,8 @@ exports.setApp = function (app, client, io) {
                         senderFirstName: userFirstName, // Storing these helps the frontend
                         senderLastName: userLastName,
                         type: 'support_needed',
-                        content: `${fullName} needs some ${type}!`,
+                        content: `${fullName} needs some ${type}!`,  // keep as the label/header
+                        message: content,                              // user's typed message
                         createdAt: new Date(),
                         isRead: false,
                         relatedId: result.insertedId
