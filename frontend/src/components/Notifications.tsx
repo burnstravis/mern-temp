@@ -21,6 +21,7 @@ interface Notification {
   createdAt: string | Date;
   isRead: boolean;
   relatedId: string | null;
+  senderId: string | null;
   senderUsername?: string;
   senderFirstName: string;
   senderLastName: string;
@@ -249,7 +250,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
 
-                      const idToUse = notification.requesterId;
+                      const idToUse = notification.senderId;
                       const firstName = notification.senderFirstName || "Friend";
                       const lastName = notification.senderLastName || "";
 
