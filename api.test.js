@@ -1,6 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { ObjectId } = require('mongodb');
 const { setApp } = require('./api');
 const tokenHandler = require('./createJWT.js');
@@ -1455,6 +1456,15 @@ describe('GET /api/support-requests', () => {
 
 describe('GET /api/return-random-prompt', () => {
 
+    it('returns 400 when conversationId is missing', async () => {
+        const app = buildApp(buildMockClient());
+
+        const res = await request(app).get('/api/return-random-prompt');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Conversation ID is required.');
+    });
+
     it('returns 404 when no prompts exist in the database', async () => {
         const client = buildMockClient({
             prompts: {
@@ -1463,10 +1473,90 @@ describe('GET /api/return-random-prompt', () => {
         });
         const app = buildApp(client);
 
-        const res = await request(app).get('/api/return-random-prompt');
+        const res = await request(app)
+            .get('/api/return-random-prompt')
+            .query({ conversationId: 'conv-1' });
 
         expect(res.status).toBe(404);
         expect(res.body.error).toBe('No prompts found.');
+    });
+
+    it('returns the same prompt for the same conversation on the same day', async () => {
+        const mockPrompts = [
+            { _id: 'p1', text: 'What made you smile today?' },
+            { _id: 'p2', text: 'Share a recent win with a friend.' },
+            { _id: 'p3', text: 'What is a goal you are excited about?' }
+        ];
+        const client = buildMockClient({
+            prompts: {
+                find: jest.fn(() => ({ toArray: jest.fn().mockResolvedValue(mockPrompts) }))
+            }
+        });
+        const app = buildApp(client);
+
+        const fixedDate = new Date('2026-04-20T12:00:00.000Z');
+        jest.useFakeTimers().setSystemTime(fixedDate);
+
+        const conversationId = 'conv-abc-123';
+
+        const expectedDate = fixedDate.toISOString().split('T')[0];
+        const expectedHashHex = crypto
+            .createHash('sha256')
+            .update(`${conversationId}:${expectedDate}`)
+            .digest('hex');
+        const expectedIndex = parseInt(expectedHashHex.slice(0, 8), 16) % mockPrompts.length;
+        const expectedPrompt = mockPrompts[expectedIndex];
+
+        const resOne = await request(app)
+            .get('/api/return-random-prompt')
+            .query({ conversationId });
+
+        const resTwo = await request(app)
+            .get('/api/return-random-prompt')
+            .query({ conversationId });
+
+        jest.useRealTimers();
+
+        expect(resOne.status).toBe(200);
+        expect(resTwo.status).toBe(200);
+        expect(resOne.body.prompt).toEqual(expectedPrompt);
+        expect(resTwo.body.prompt).toEqual(expectedPrompt);
+        expect(resOne.body.error).toBe('');
+        expect(resTwo.body.error).toBe('');
+    });
+
+    it('can return a different prompt for a different conversation on the same day', async () => {
+        const mockPrompts = Array.from({ length: 20 }, (_, i) => ({
+            _id: `p${i + 1}`,
+            text: `Prompt ${i + 1}`
+        }));
+        const client = buildMockClient({
+            prompts: {
+                find: jest.fn(() => ({ toArray: jest.fn().mockResolvedValue(mockPrompts) }))
+            }
+        });
+        const app = buildApp(client);
+
+        const fixedDate = new Date('2026-04-20T12:00:00.000Z');
+        jest.useFakeTimers().setSystemTime(fixedDate);
+
+        const firstConversationId = 'conv-first';
+        const secondConversationId = 'conv-second';
+
+        const resOne = await request(app)
+            .get('/api/return-random-prompt')
+            .query({ conversationId: firstConversationId });
+
+        const resTwo = await request(app)
+            .get('/api/return-random-prompt')
+            .query({ conversationId: secondConversationId });
+
+        jest.useRealTimers();
+
+        expect(resOne.status).toBe(200);
+        expect(resTwo.status).toBe(200);
+        expect(resOne.body.prompt).toBeDefined();
+        expect(resTwo.body.prompt).toBeDefined();
     });
 
     it('returns 200 with a prompt on success', async () => {
@@ -1481,7 +1571,9 @@ describe('GET /api/return-random-prompt', () => {
         });
         const app = buildApp(client);
 
-        const res = await request(app).get('/api/return-random-prompt');
+        const res = await request(app)
+            .get('/api/return-random-prompt')
+            .query({ conversationId: 'conv-success' });
 
         expect(res.status).toBe(200);
         expect(res.body.prompt).toBeDefined();
