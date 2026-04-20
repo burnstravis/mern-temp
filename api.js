@@ -719,7 +719,7 @@ exports.setApp = function (app, client, io) {
 
             const db = client.db('large_project');
 
-            const prompts = await db.collection('prompts').find().toArray();
+            const prompts = await db.collection('prompts').find().sort({ _id: 1 }).toArray();
 
             if (!prompts.length) {
                 return res.status(404).json({ error: 'No prompts found.' });

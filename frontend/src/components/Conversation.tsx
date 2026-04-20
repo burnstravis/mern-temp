@@ -119,7 +119,6 @@ function Conversation() {
                 // Send raw ID, server adds "conversation:" prefix
                 socket.emit('join:conversation', convId);
                 loadConversations(convId);
-                fetchRandomPrompt(convId);
                 console.log("loading conversations");
             }
         });
@@ -158,6 +157,22 @@ function Conversation() {
             }
         };
     }, [friendId, userId, getConvId, loadConversations, fetchRandomPrompt]); // Keep dependencies minimal
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadPrompt = async () => {
+            const convId = await getConvId();
+            if (!convId || !isMounted) return;
+            fetchRandomPrompt(convId);
+        };
+
+        loadPrompt();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [getConvId, fetchRandomPrompt]);
 
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
