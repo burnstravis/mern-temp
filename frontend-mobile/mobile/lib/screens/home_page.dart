@@ -9,6 +9,7 @@ import 'friends_page.dart';
 import 'conversation_page.dart';
 import 'notifications_page.dart';
 import 'support_page.dart';
+import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
   final String firstName;
@@ -139,6 +140,7 @@ class _HomePageState extends State<HomePage> {
           _buildNavItem(3, CupertinoIcons.compass_fill, "Discover"),
           _buildNavItem(4, CupertinoIcons.bell_fill, "Alerts"),
           _buildNavItem(5, CupertinoIcons.envelope_open_fill, "Support"),
+          _buildNavItem(7, CupertinoIcons.settings_solid, "Settings"),
         ],
       ),
     );
@@ -156,7 +158,8 @@ class _HomePageState extends State<HomePage> {
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: MediaQuery.of(context).size.width / 7,
+        // Changed divisor from 7 to 8 to accommodate the extra button
+        width: MediaQuery.of(context).size.width / 8.5,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -165,15 +168,24 @@ class _HomePageState extends State<HomePage> {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 42 : 0,
+                  width: isSelected ? 35 : 0, // Slightly narrower highlight
                   height: 28,
-                  decoration: BoxDecoration(color: isSelected ? figmaBlue : Colors.transparent, borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                      color: isSelected ? figmaBlue : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                Icon(icon, color: isSelected ? Colors.white : Colors.black45, size: 20),
+                Icon(icon, color: isSelected ? Colors.white : Colors.black45, size: 18),
               ],
             ),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 8, color: isSelected ? figmaBlue : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+            Text(
+                label,
+                style: TextStyle(
+                    fontSize: 7, // Slightly smaller text to fit
+                    color: isSelected ? figmaBlue : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+                )
+            ),
           ],
         ),
       ),
@@ -217,6 +229,7 @@ class _HomePageState extends State<HomePage> {
               });
             },
           );
+      case 7: return const SettingsPage();
       default: return _buildHomeView();
     }
   }

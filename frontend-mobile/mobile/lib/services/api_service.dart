@@ -573,4 +573,31 @@ class ApiService {
       }
     }
 
+  static Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final token = await TokenManager.getToken();
+      if (token == null) return {'error': 'No token provided.'};
+
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/users/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      await _updateSession(data);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        return {'error': data['error'] ?? 'Failed to delete account'};
+      }
+    } catch (e) {
+      return {'error': 'Connection failed: $e'};
+    }
+  }
+
 }

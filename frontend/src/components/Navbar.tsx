@@ -27,6 +27,8 @@ const Navbar = () => {
             </div>
 
             <div className={styles.NavigatorLogOut}>
+                <button className={styles.settingsButton} onClick={() => navigate('/settings')}>Settings</button>
+
                 <button className={styles.logoutButton} onClick={doLogout}>Logout</button>
             </div>
         </div>
