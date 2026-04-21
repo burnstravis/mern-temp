@@ -6,11 +6,9 @@ const ConversationPage = () => {
 
     return (
         <div className={styles.conversationWrapper}>
-            <div className={styles.conversationContainer}>
-                <h1 className={styles.conversationTitle}>Friend Connector</h1>
-                <p className={styles.conversationSubtitle}>Messages</p>
-                <Conversation />
-            </div>
+            <h1 className={styles.conversationTitle}>Friend Connector</h1>
+            <p className={styles.conversationSubtitle}>Messages</p>
+            <Conversation />
         </div>
     );
 };
