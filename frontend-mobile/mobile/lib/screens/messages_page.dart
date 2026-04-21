@@ -135,6 +135,7 @@ class _MessagesPageState extends State<MessagesPage> {
               fontSize: 48,
               fontWeight: FontWeight.bold,
               color: Colors.white,
+              shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
             ),
           ),
           Text(
@@ -153,6 +154,9 @@ class _MessagesPageState extends State<MessagesPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
+                ],
               ),
               child: Column(
                 children: [
@@ -218,6 +222,9 @@ class _MessagesPageState extends State<MessagesPage> {
       decoration: BoxDecoration(
         color: searchHeaderBg,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
+        ],
       ),
       child: Row(
         children: [
