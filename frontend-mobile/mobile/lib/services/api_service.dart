@@ -489,9 +489,12 @@ class ApiService {
   }
 
 
-  static Future<Map<String, dynamic>> getRandomPrompt() async {
+  static Future<Map<String, dynamic>> getRandomPrompt(String conversationId) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/return-random-prompt'));
+      final uri = Uri.parse('$_baseUrl/return-random-prompt')
+          .replace(queryParameters: {'conversationId': conversationId});
+
+      final response = await http.get(uri);
       return jsonDecode(response.body);
     } catch (e) {
       return {'error': 'Connection failed: $e'};
@@ -546,5 +549,28 @@ class ApiService {
       return {'error': 'Connection failed: $e'};
     }
   }
+
+  static Future<Map<String, dynamic>> getFriendProfile(String friendId) async {
+      try {
+        final token = await TokenManager.getToken();
+        if (token == null) return {'error': 'No token provided.'};
+
+        final response = await http.get(
+          Uri.parse('$_baseUrl/friend-profile/$friendId'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        await _updateSession(data);
+
+        return data;
+      } catch (e) {
+        return {'error': 'Connection failed: $e'};
+      }
+    }
 
 }

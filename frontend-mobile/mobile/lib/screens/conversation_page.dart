@@ -9,6 +9,7 @@ class ConversationPage extends StatefulWidget {
   final String conversationId;
   final String currentUserId;
   final String displayName;
+  final String? friendId; // Added to fetch profile for birthday check
   final VoidCallback onBack;
 
   const ConversationPage({
@@ -16,6 +17,7 @@ class ConversationPage extends StatefulWidget {
     required this.conversationId,
     required this.currentUserId,
     required this.displayName,
+    this.friendId,
     required this.onBack,
   });
 
@@ -33,6 +35,7 @@ class _ConversationPageState extends State<ConversationPage> {
   String _prompt = "Loading...";
   bool _isConnecting = false;
   bool _isGeneratingReply = false;
+  bool _friendBirthdayToday = false; // Track birthday state
 
   @override
   void initState() {
@@ -40,6 +43,37 @@ class _ConversationPageState extends State<ConversationPage> {
     _fetchMessages();
     _fetchPrompt();
     _initSocket();
+    _loadFriendProfile(); // Load profile on init
+  }
+
+  // Logic to parse and check birthday from the API response
+  bool _isBirthdayToday(String? birthday) {
+    if (birthday == null || birthday.isEmpty) return false;
+
+    try {
+      // Parse ISO or simple date strings
+      DateTime parsedDate = DateTime.parse(birthday.split('T')[0]).toUtc();
+      DateTime today = DateTime.now();
+
+      return parsedDate.month == today.month && parsedDate.day == today.day;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _loadFriendProfile() async {
+    if (widget.friendId == null) return;
+
+    try {
+      final result = await ApiService.getFriendProfile(widget.friendId!);
+      if (mounted && result.containsKey('friend')) {
+        setState(() {
+          _friendBirthdayToday = _isBirthdayToday(result['friend']['birthday']);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading friend profile: $e");
+    }
   }
 
   Future<void> _handleSmartReply() async {
@@ -160,16 +194,23 @@ class _ConversationPageState extends State<ConversationPage> {
   }
 
   Future<void> _fetchPrompt() async {
-    final result = await ApiService.getRandomPrompt();
-    if (mounted) {
-      setState(() {
-        if (result.containsKey('prompt')) {
-          final promptData = result['prompt'];
-          _prompt = promptData['content'] ?? promptData['text'] ?? "No prompt today!";
-        } else {
-          _prompt = "Click here to start the conversation!";
-        }
-      });
+    try {
+      final result = await ApiService.getRandomPrompt(widget.conversationId);
+
+      if (mounted) {
+        setState(() {
+          if (result.containsKey('prompt') && result['prompt'] != null) {
+            final promptData = result['prompt'];
+            _prompt = promptData['content'] ?? promptData['text'] ?? "No prompt today!";
+          } else {
+            _prompt = "No prompt today!";
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _prompt = "No prompt today!");
+      }
     }
   }
 
@@ -186,14 +227,12 @@ class _ConversationPageState extends State<ConversationPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Detect keyboard height
     final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard on background tap
+      onTap: () => FocusScope.of(context).unfocus(),
       child: SafeArea(
         child: Padding(
-          // Shift content up based on keyboard height
           padding: EdgeInsets.only(bottom: keyboardHeight),
           child: Column(
             children: [
@@ -214,7 +253,6 @@ class _ConversationPageState extends State<ConversationPage> {
                   ),
                 ),
               ),
-              // Hide bottom spacer when keyboard is active to save space
               if (keyboardHeight == 0) const SizedBox(height: 90),
             ],
           ),
@@ -232,7 +270,25 @@ class _ConversationPageState extends State<ConversationPage> {
           Row(
             children: [
               IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: widget.onBack),
-              Expanded(child: Text(widget.displayName, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(widget.displayName, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    if (_friendBirthdayToday)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFF0A500),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text("🎂 Birthday today", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               const SizedBox(width: 48),
             ],
           ),
@@ -311,7 +367,6 @@ class _ConversationPageState extends State<ConversationPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // "Generating..." indicator (matches your web app's generatingRow)
           if (_isGeneratingReply)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
@@ -332,7 +387,6 @@ class _ConversationPageState extends State<ConversationPage> {
             ),
           Row(
             children: [
-              // Smart Reply Button
               GestureDetector(
                 onTap: _isGeneratingReply ? null : _handleSmartReply,
                 child: Container(

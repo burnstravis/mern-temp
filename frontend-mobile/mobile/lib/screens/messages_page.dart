@@ -7,18 +7,21 @@ class Conversation {
   final String otherUserName;
   final String lastText;
   final String lastMessageAt;
+  final String birthday; // Added field
 
   Conversation({
     required this.id,
     required this.otherUserName,
     required this.lastText,
     required this.lastMessageAt,
+    required this.birthday, // Added to constructor
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
     final otherUser = json['otherUser'] ?? {};
     String firstName = otherUser['firstName'] ?? '';
     String lastName = otherUser['lastName'] ?? '';
+    String birthday = otherUser['birthday'] ?? ''; // Extract birthday
 
     String displayName = "$firstName $lastName".trim();
     if (displayName.isEmpty) {
@@ -30,6 +33,7 @@ class Conversation {
       otherUserName: displayName,
       lastText: json['lastMessage'] ?? 'No messages yet...',
       lastMessageAt: json['lastMessageAt'] ?? DateTime.now().toIso8601String(),
+      birthday: birthday, // Pass to constructor
     );
   }
 }
@@ -58,6 +62,19 @@ class _MessagesPageState extends State<MessagesPage> {
   void initState() {
     super.initState();
     _fetchConversations();
+  }
+
+  // Logic to check if it's the user's birthday today
+  bool _isBirthdayToday(String? birthday) {
+    if (birthday == null || birthday.isEmpty) return false;
+    try {
+      // Handles both ISO strings (T00:00:00) and simple date strings
+      DateTime parsedDate = DateTime.parse(birthday.split('T')[0]).toUtc();
+      DateTime today = DateTime.now();
+      return parsedDate.month == today.month && parsedDate.day == today.day;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> _fetchConversations() async {
@@ -118,7 +135,6 @@ class _MessagesPageState extends State<MessagesPage> {
               fontSize: 48,
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              shadows: [const Shadow(color: Colors.black26, offset: Offset(1, 2), blurRadius: 6)],
             ),
           ),
           Text(
@@ -130,7 +146,6 @@ class _MessagesPageState extends State<MessagesPage> {
             ),
           ),
           const SizedBox(height: 20),
-
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -138,9 +153,6 @@ class _MessagesPageState extends State<MessagesPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
-                ],
               ),
               child: Column(
                 children: [
@@ -167,7 +179,7 @@ class _MessagesPageState extends State<MessagesPage> {
               ),
             ),
           ),
-          const SizedBox(height: 90), // Nav bar spacing
+          const SizedBox(height: 90),
         ],
       ),
     );
@@ -206,9 +218,6 @@ class _MessagesPageState extends State<MessagesPage> {
       decoration: BoxDecoration(
         color: searchHeaderBg,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(1, 2))
-        ],
       ),
       child: Row(
         children: [
@@ -221,8 +230,7 @@ class _MessagesPageState extends State<MessagesPage> {
               child: TextField(
                 controller: _searchController,
                 onChanged: _filterList,
-                style: const TextStyle(color: Color.fromRGBO(0, 0, 0, 0.7), fontSize: 16),
-
+                style: const TextStyle(color: Colors.black87, fontSize: 16),
                 decoration: const InputDecoration(
                   hintText: "Search",
                   border: InputBorder.none,
@@ -250,19 +258,17 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   Widget _buildConversationCard(Conversation conv) {
-    // Apply capitalization to display name
     String capitalizedName = conv.otherUserName.isNotEmpty
         ? conv.otherUserName[0].toUpperCase() + conv.otherUserName.substring(1)
         : conv.otherUserName;
+
+    bool birthdayToday = _isBirthdayToday(conv.birthday);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(1, 2))
-        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -277,14 +283,22 @@ class _MessagesPageState extends State<MessagesPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        capitalizedName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.white,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              capitalizedName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          if (birthdayToday)
+                            const Text("🎂", style: TextStyle(fontSize: 18)),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(
