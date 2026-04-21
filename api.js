@@ -443,6 +443,104 @@ exports.setApp = function (app, client, io) {
         }
     });
 
+    app.delete('/api/users/me', async (req, res) => {
+        let jwtToken = req.headers['authorization'];
+
+        if (!jwtToken) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        try {
+            if (jwtToken.startsWith('Bearer ')) {
+                jwtToken = jwtToken.slice(7);
+            }
+
+            if (tokenHandler.isExpired(jwtToken)) {
+                return res.status(401).json({ error: 'Token expired.' });
+            }
+
+            const decoded = require('jsonwebtoken').decode(jwtToken);
+            if (!decoded?.id || !ObjectId.isValid(decoded.id)) {
+                return res.status(401).json({ error: 'Invalid token payload.' });
+            }
+
+            const db = client.db('large_project');
+            const userObjectId = new ObjectId(decoded.id);
+
+            const [friendships, conversations, supportRequests] = await Promise.all([
+                db.collection('friendships')
+                    .find({
+                        $or: [
+                            { requesterId: userObjectId },
+                            { recipientId: userObjectId }
+                        ]
+                    })
+                    .project({ _id: 1 })
+                    .toArray(),
+                db.collection('conversations')
+                    .find({ participants: userObjectId })
+                    .project({ _id: 1 })
+                    .toArray(),
+                db.collection('support_requests')
+                    .find({ userId: userObjectId })
+                    .project({ _id: 1 })
+                    .toArray()
+            ]);
+
+            const friendshipIds = friendships.map((f) => f._id);
+            const conversationIds = conversations.map((c) => c._id);
+            const supportRequestIds = supportRequests.map((sr) => sr._id);
+
+            const notificationFilters = [
+                { recipientId: userObjectId },
+                { senderId: userObjectId }
+            ];
+
+            if (friendshipIds.length > 0) {
+                notificationFilters.push({ relatedId: { $in: friendshipIds } });
+            }
+
+            if (conversationIds.length > 0) {
+                notificationFilters.push({ relatedId: { $in: conversationIds } });
+            }
+
+            if (supportRequestIds.length > 0) {
+                notificationFilters.push({ relatedId: { $in: supportRequestIds } });
+            }
+
+            const messageFilters = [
+                { senderId: userObjectId.toString() },
+                { senderid: userObjectId.toString() }
+            ];
+
+            if (conversationIds.length > 0) {
+                const conversationIdStrings = conversationIds.map((id) => id.toString());
+                messageFilters.push({ conversationId: { $in: conversationIdStrings } });
+                messageFilters.push({ conversationid: { $in: conversationIdStrings } });
+            }
+
+            await Promise.all([
+                db.collection('friendships').deleteMany({
+                    $or: [
+                        { requesterId: userObjectId },
+                        { recipientId: userObjectId }
+                    ]
+                }),
+                db.collection('notifications').deleteMany({ $or: notificationFilters }),
+                db.collection('messages').deleteMany({ $or: messageFilters }),
+                db.collection('conversations').deleteMany({ participants: userObjectId }),
+                db.collection('support_requests').deleteMany({ userId: userObjectId }),
+                db.collection('ai_usage').deleteMany({ userId: userObjectId }),
+                db.collection('users').deleteOne({ _id: userObjectId })
+            ]);
+
+            return res.status(200).json({ error: '', message: 'User account deleted.' });
+        } catch (e) {
+            console.error('Delete User Error:', e);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
     app.get('/api/friends', async (req, res) => {
         const search = req.query.search || "";
         const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

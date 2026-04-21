@@ -567,6 +567,97 @@ describe('GET /api/users', () => {
     });
 });
 
+// ─── DELETE /api/users/me ────────────────────────────────────────────────────
+
+describe('DELETE /api/users/me', () => {
+
+    it('returns 401 when no token is provided', async () => {
+        const app = buildApp(buildMockClient());
+
+        const res = await request(app).delete('/api/users/me');
+
+        expect(res.status).toBe(401);
+        expect(res.body.error).toBe('No token provided.');
+    });
+
+    it('returns 401 when token is expired', async () => {
+        tokenHandler.isExpired.mockReturnValueOnce(true);
+        const app = buildApp(buildMockClient());
+
+        const res = await request(app)
+            .delete('/api/users/me')
+            .set('Authorization', MOCK_TOKEN);
+
+        expect(res.status).toBe(401);
+        expect(res.body.error).toBe('Token expired.');
+    });
+
+    it('returns 200 and cascades cleanup for friendships and related data', async () => {
+        const userId = new ObjectId(MOCK_USER_ID);
+        const friendId = new ObjectId('617f1f77bcf86cd799439022');
+        const friendshipId = new ObjectId('717f1f77bcf86cd799439033');
+        const conversationId = new ObjectId('817f1f77bcf86cd799439044');
+        const supportRequestId = new ObjectId('917f1f77bcf86cd799439055');
+
+        const client = buildMockClient({
+            friendships: {
+                find: jest.fn(() => ({
+                    project: jest.fn().mockReturnThis(),
+                    toArray: jest.fn().mockResolvedValue([
+                        { _id: friendshipId, requesterId: userId, recipientId: friendId }
+                    ])
+                })),
+                deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 })
+            },
+            conversations: {
+                find: jest.fn(() => ({
+                    project: jest.fn().mockReturnThis(),
+                    toArray: jest.fn().mockResolvedValue([
+                        { _id: conversationId }
+                    ])
+                })),
+                deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 })
+            },
+            support_requests: {
+                find: jest.fn(() => ({
+                    project: jest.fn().mockReturnThis(),
+                    toArray: jest.fn().mockResolvedValue([
+                        { _id: supportRequestId }
+                    ])
+                })),
+                deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 })
+            },
+            notifications: {
+                deleteMany: jest.fn().mockResolvedValue({ deletedCount: 3 })
+            },
+            messages: {
+                deleteMany: jest.fn().mockResolvedValue({ deletedCount: 4 })
+            },
+            ai_usage: {
+                deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 })
+            },
+            users: {
+                deleteOne: jest.fn().mockResolvedValue({ deletedCount: 1 })
+            }
+        });
+        const app = buildApp(client);
+
+        const res = await request(app)
+            .delete('/api/users/me')
+            .set('Authorization', MOCK_TOKEN);
+
+        const db = client.db();
+        const friendshipDeletes = db.collection('friendships').deleteMany;
+        const notificationDeletes = db.collection('notifications').deleteMany;
+
+        expect(res.status).toBe(200);
+        expect(res.body.error).toBe('');
+        expect(res.body.message).toBe('User account deleted.');
+        expect(friendshipDeletes).toHaveBeenCalledTimes(1);
+        expect(notificationDeletes).toHaveBeenCalledTimes(1);
+    });
+});
+
 // ─── GET /api/friends ─────────────────────────────────────────────────────────
 
 describe('GET /api/friends', () => {
